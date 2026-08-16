@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  button {
+    white-space: nowrap;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium !text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-foreground/10 px-4 text-sm font-medium text-foreground/70 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-small {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-foreground/10 px-3 text-xs font-medium text-foreground/70 transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .input-base {
+    @apply h-[35px] w-full rounded-lg bg-card border border-foreground/10 px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none;
+  }
+
+  textarea.input-base {
+    @apply h-auto;
+  }
+
+  .form-label {
+    @apply text-sm font-medium text-foreground/80;
+  }
+
+  .item-title {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  .text-secondary {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .form-hint {
+    @apply text-xs text-foreground/50;
+  }
+
+  .card-base {
+    @apply rounded-xl border border-foreground/10 bg-background p-6;
+  }
+
+  .card-sm {
+    @apply rounded-lg border border-foreground/10 bg-background p-3;
+  }
+
+  .card-xs {
+    @apply rounded-lg border border-foreground/10 p-2;
+  }
+
+  .badge-primary {
+    @apply inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary;
+  }
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 210 40% 93%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --primary: 245 60% 55%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+}
+
+.dark {
+  --background: 0 0% 7%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 10%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --primary: 245 60% 55%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

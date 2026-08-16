@@ -1,0 +1,4 @@
+dev:
+  desc: Run development
+  script: |
+    pnpm dev
