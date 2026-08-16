@@ -31,6 +31,7 @@ declare global {
   const useBoardFilters: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useBoardFilters"))["useBoardFilters"];
   const useBoardTaskOps: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useBoardTaskOps"))["useBoardTaskOps"];
   const useI18n: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useI18n"))["useI18n"];
+  const useKeyboardShortcuts: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useKeyboardShortcuts"))["useKeyboardShortcuts"];
   const useLocalApi: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useLocalApi"))["useLocalApi"];
   const useNotes: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes"))["useNotes"];
   const useOrgData: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useOrgData"))["useOrgData"];
