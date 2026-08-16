@@ -79,8 +79,14 @@ jobs:
           name: yourtab-extension
           path: artifacts
 
+      - name: Prepare AMO source
+        run: |
+          mkdir -p amo-source
+          unzip -q artifacts/yourtab-extension-firefox*.zip -d amo-source
+          ls -la amo-source/
+
       - name: Submit to AMO
-        run: npx web-ext sign --source-dir artifacts --channel listed
+        run: npx web-ext sign --source-dir amo-source --channel listed
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
