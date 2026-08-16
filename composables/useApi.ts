@@ -8,6 +8,10 @@ import type {
   Board,
   TaskStatus,
   Project,
+  UserInfo,
+  TaskTag,
+  SprintInfo,
+  TaskListParams,
 } from "@/lib/types";
 
 const AUTH_ERRORS = new Set([
@@ -80,8 +84,32 @@ export function useApi() {
     };
   }
 
-  async function listTasks(projectSlug: string): Promise<TaskListResponse> {
-    return apiFetch<TaskListResponse>(`/projects/${projectSlug}/tasks`);
+  async function listTasks(
+    projectSlug: string,
+    params?: TaskListParams,
+  ): Promise<TaskListResponse> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set("search", params.search);
+    if (params?.assigneeIds?.length)
+      query.set("assignee_ids", params.assigneeIds.join(","));
+    if (params?.responsibleIds?.length)
+      query.set("responsible_ids", params.responsibleIds.join(","));
+    if (params?.createdByIds?.length)
+      query.set("created_by_ids", params.createdByIds.join(","));
+    if (params?.tagIds?.length)
+      query.set("tag_ids", params.tagIds.join(","));
+    if (params?.sprintIds?.length)
+      query.set("sprint_ids", params.sprintIds.join(","));
+    if (params?.priority != null)
+      query.set("priority", String(params.priority));
+    if (params?.sort && params.sort !== "default")
+      query.set("sort", params.sort);
+    if (params?.includeArchived) query.set("include_archived", "true");
+    if (params?.parentOnly) query.set("parent_only", "true");
+    const qs = query.toString();
+    return apiFetch<TaskListResponse>(
+      `/projects/${projectSlug}/tasks${qs ? `?${qs}` : ""}`,
+    );
   }
 
   async function updateTask(
@@ -123,6 +151,27 @@ export function useApi() {
     return resp.statuses ?? [];
   }
 
+  async function getProjectMembers(projectSlug: string): Promise<UserInfo[]> {
+    const resp = await apiFetch<{ members: UserInfo[] }>(
+      `/projects/${projectSlug}/members`,
+    );
+    return resp.members ?? [];
+  }
+
+  async function getProjectTags(projectSlug: string): Promise<TaskTag[]> {
+    const resp = await apiFetch<{ tags: TaskTag[] }>(
+      `/projects/${projectSlug}/tags`,
+    );
+    return resp.tags ?? [];
+  }
+
+  async function getProjectSprints(projectSlug: string): Promise<SprintInfo[]> {
+    const resp = await apiFetch<{ sprints: SprintInfo[] }>(
+      `/projects/${projectSlug}/sprints`,
+    );
+    return resp.sprints ?? [];
+  }
+
   return {
     apiFetch,
     getWorkspace,
@@ -131,5 +180,8 @@ export function useApi() {
     createTask,
     getBoards,
     getStatuses,
+    getProjectMembers,
+    getProjectTags,
+    getProjectSprints,
   };
 }

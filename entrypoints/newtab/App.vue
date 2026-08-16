@@ -3,6 +3,7 @@ import { onMounted, ref, computed, watch } from "vue";
 import { Settings } from "lucide-vue-next";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n } from "@/composables/useI18n";
+import { useSettings } from "@/composables/useSettings";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
 import { readLastLocation, writeLastLocation } from "@/lib/settings";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
@@ -10,10 +11,12 @@ import AgileBoard from "@/components/AgileBoard.vue";
 import ProjectSidebar from "@/components/ProjectSidebar.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import QuickLinks from "@/components/QuickLinks.vue";
+import Logo from "@/components/Logo.vue";
 import type { Project } from "@/lib/types";
 
 const { t } = useI18n();
 const { initTheme } = useTheme();
+const { settings } = useSettings();
 
 const selectedOrg = ref<string | null>(null);
 const selectedProject = ref<string | null>(null);
@@ -87,6 +90,14 @@ const sidebarProjects = computed<Project[]>(() => {
 watch(sidebarProjects, () => {
   if (pendingProject.value) {
     tryRestoreProject();
+    return;
+  }
+  if (
+    !isRestoring.value &&
+    !selectedProject.value &&
+    sidebarProjects.value.length > 0
+  ) {
+    selectedProject.value = sidebarProjects.value[0].slug;
   }
 });
 
@@ -113,7 +124,10 @@ function handleDeleteProject(id: number) {
     <header
       class="flex items-center justify-between border-b border-foreground/10 px-4 py-3"
     >
-      <Breadcrumbs ref="breadcrumbsRef" v-model:org="selectedOrg" />
+      <div class="flex items-center gap-3">
+        <Logo path="/logos/logo-cat.svg" :accent="settings.accent" :size="32" />
+        <Breadcrumbs ref="breadcrumbsRef" v-model:org="selectedOrg" />
+      </div>
       <div class="absolute left-1/2 -translate-x-1/2 z-50">
         <QuickLinks />
       </div>
@@ -135,6 +149,7 @@ function handleDeleteProject(id: number) {
         :selected-project="selectedProject"
         :loading="orgType === 'local' && orgData.projectsLoading.value"
         :can-create="orgType === 'local'"
+        :is-remote="orgType === 'remote'"
         @select="selectedProject = $event"
         @create="handleCreateProject"
         @edit="handleEditProject"

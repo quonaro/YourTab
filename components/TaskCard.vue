@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { Flag } from "lucide-vue-next";
 import { useI18n } from "@/composables/useI18n";
+import { getApiDomain } from "@/lib/config";
 import type { Task } from "@/lib/types";
 
 const { t } = useI18n();
@@ -9,6 +10,8 @@ const { t } = useI18n();
 const props = defineProps<{
   task: Task;
   draggable?: boolean;
+  orgSlug?: string;
+  projectSlug?: string;
 }>();
 
 defineEmits<{
@@ -42,18 +45,37 @@ const assigneeInitials = computed(() => {
   const last = a.lastName?.[0] ?? "";
   return (first + last).toUpperCase();
 });
+
+const isRemote = computed(() => props.orgSlug && props.orgSlug !== "local");
+
+function openTask() {
+  if (!isRemote.value || !props.orgSlug || !props.projectSlug) return;
+  const taskId = props.task.shortId || String(props.task.id);
+  const url = `${getApiDomain()}/app/organizations/${props.orgSlug}/projects/${props.projectSlug}/tasks/${taskId}`;
+  window.open(url, "_blank");
+}
 </script>
 
 <template>
   <div
-    class="card-xs bg-background transition hover:shadow-md"
-    :class="draggable ? 'cursor-grab active:cursor-grabbing' : ''"
+    class="card-xs bg-card transition hover:shadow-md"
+    :class="[
+      draggable ? 'cursor-grab active:cursor-grabbing' : '',
+      isRemote ? 'cursor-pointer' : '',
+    ]"
     :draggable="draggable ?? true"
+    @click="openTask"
     @dragstart="$emit('dragstart', task)"
     @dragend="$emit('dragend')"
   >
     <div class="flex items-start justify-between gap-2">
-      <span class="item-title flex-1">{{ task.title }}</span>
+      <span class="item-title flex-1">
+        <span
+          v-if="task.shortId"
+          class="font-mono text-[0.833em] text-muted-foreground"
+          >{{ task.shortId }}&nbsp;</span
+        >{{ task.title }}
+      </span>
       <div :class="priorityColor" class="flex items-center gap-0.5 text-xs">
         <Flag :size="12" />
       </div>

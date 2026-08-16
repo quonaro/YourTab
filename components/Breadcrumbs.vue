@@ -60,7 +60,7 @@ async function loadRemoteOrgs() {
   }
 }
 
-watch(org, (newOrg) => {
+function syncSelectedOrg(newOrg: string | null) {
   if (newOrg === "local") {
     selectedOrgType.value = "local";
     selectedOrg.value = null;
@@ -68,6 +68,14 @@ watch(org, (newOrg) => {
     selectedOrgType.value = "remote";
     selectedOrg.value =
       remoteOrganizations.value.find((o) => o.slug === newOrg) ?? null;
+  }
+}
+
+watch(org, syncSelectedOrg);
+
+watch(remoteOrganizations, () => {
+  if (org.value && org.value !== "local") {
+    syncSelectedOrg(org.value);
   }
 });
 
@@ -154,7 +162,7 @@ function selectOrgEntry(entry: OrgEntry) {
 
 <style scoped>
 .dropdown-panel {
-  border: 1px solid hsl(var(--border, 240 5% 90%));
+  border: 1px solid hsl(var(--foreground) / 0.1);
   border-radius: 0.5rem;
   background: hsl(var(--background, 0 0% 100%));
   padding: 0.25rem;

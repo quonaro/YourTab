@@ -12,21 +12,36 @@ import {
   ChevronRight,
   GripVertical,
   RotateCcw,
-  RefreshCw,
   LayoutGrid,
   Columns3,
+  Search,
+  SlidersHorizontal,
 } from "lucide-vue-next";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
 import { useWebSocket, type WSMessage } from "@/composables/useWebSocket";
 import { useAuth } from "@/composables/useAuth";
 import { useI18n } from "@/composables/useI18n";
 import { useSettings } from "@/composables/useSettings";
+import { useRefreshCountdown } from "@/composables/useRefreshCountdown";
 import { mapApiError } from "@/lib/apiErrors";
 import TaskCard from "./TaskCard.vue";
-import type { Task, TaskStatus, Board } from "@/lib/types";
+import MultiSelectFilter from "./MultiSelectFilter.vue";
+import Form from "@/components/Form.vue";
+import type {
+  Task,
+  TaskStatus,
+  Board,
+  UserInfo,
+  TaskTag,
+  SprintInfo,
+  TaskFilters,
+  TaskListParams,
+} from "@/lib/types";
 
 const { t } = useI18n();
 const { settings } = useSettings();
+const { nextRefreshIn, setupAutoRefresh, teardownAutoRefresh } =
+  useRefreshCountdown();
 
 const props = defineProps<{
   orgSlug: string;
@@ -50,6 +65,9 @@ const {
   dragTask,
   reorderTasks,
   getBoards,
+  getProjectMembers,
+  getProjectTags,
+  getProjectSprints,
   createBoard,
   deleteBoard,
 } = useOrgData(orgTypeRef, orgSlugRef);
@@ -73,6 +91,160 @@ const dragOverTaskId = ref<number | null>(null);
 const dragOverPosition = ref<"before" | "after">("before");
 const lockedTaskIds = shallowRef<Map<number, number>>(new Map());
 const newTaskInputs = ref<Record<string, string>>({});
+
+// ─── Search & Filters (remote only) ───
+const searchQuery = ref("");
+const filters = ref<TaskFilters>({
+  search: "",
+  assigneeIds: [],
+  responsibleIds: [],
+  createdByIds: [],
+  tagIds: [],
+  sprintIds: [],
+  priority: null,
+  sort: "default",
+  includeArchived: false,
+  hasChildren: false,
+});
+const filterSidebarOpen = ref(false);
+const members = ref<UserInfo[]>([]);
+const tags = ref<TaskTag[]>([]);
+const sprints = ref<SprintInfo[]>([]);
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+const memberOptions = computed(() =>
+  members.value.map((m) => {
+    const parts = [m.firstName, m.lastName].filter(
+      (s): s is string => !!s?.trim(),
+    );
+    return {
+      value: m.id,
+      label: parts.length
+        ? parts.join(" ")
+        : m.username || m.email || String(m.id),
+    };
+  }),
+);
+
+const tagOptions = computed(() =>
+  tags.value.map((tag) => ({ value: tag.id, label: tag.name })),
+);
+
+const sprintOptions = computed(() =>
+  sprints.value
+    .filter((s) => !s.isArchived)
+    .map((s) => ({
+      value: s.id,
+      label: s.isOrgSprint ? `${s.name}` : s.name,
+    })),
+);
+
+const priorityOptions = computed(() => [
+  { value: 1, label: t("taskCard.priority.low") },
+  { value: 2, label: t("taskCard.priority.medium") },
+  { value: 3, label: t("taskCard.priority.high") },
+  { value: 4, label: t("taskCard.priority.urgent") },
+]);
+
+const sortOptions = computed(() => [
+  { value: "default", label: t("boardFilters.sortDefault") },
+  { value: "deadline-asc", label: t("boardFilters.sortDeadlineAsc") },
+  { value: "deadline-desc", label: t("boardFilters.sortDeadlineDesc") },
+  { value: "priority-desc", label: t("boardFilters.sortPriorityDesc") },
+  { value: "priority-asc", label: t("boardFilters.sortPriorityAsc") },
+  { value: "title-asc", label: t("boardFilters.sortTitleAsc") },
+  { value: "title-desc", label: t("boardFilters.sortTitleDesc") },
+]);
+
+const hasActiveFilters = computed(() => {
+  const f = filters.value;
+  return (
+    f.assigneeIds.length > 0 ||
+    f.responsibleIds.length > 0 ||
+    f.createdByIds.length > 0 ||
+    f.tagIds.length > 0 ||
+    f.sprintIds.length > 0 ||
+    f.priority != null ||
+    (f.sort != null && f.sort !== "default") ||
+    f.includeArchived ||
+    f.hasChildren
+  );
+});
+
+const activeFilterCount = computed(() => {
+  const f = filters.value;
+  let count = 0;
+  if (f.assigneeIds.length > 0) count++;
+  if (f.responsibleIds.length > 0) count++;
+  if (f.createdByIds.length > 0) count++;
+  if (f.tagIds.length > 0) count++;
+  if (f.sprintIds.length > 0) count++;
+  if (f.priority != null) count++;
+  if (f.sort != null && f.sort !== "default") count++;
+  if (f.includeArchived) count++;
+  if (f.hasChildren) count++;
+  return count;
+});
+
+function buildTaskParams(): TaskListParams | undefined {
+  if (!isRemote.value) return undefined;
+  const f = filters.value;
+  return {
+    search: f.search || undefined,
+    assigneeIds: f.assigneeIds.length ? f.assigneeIds : undefined,
+    responsibleIds: f.responsibleIds.length ? f.responsibleIds : undefined,
+    createdByIds: f.createdByIds.length ? f.createdByIds : undefined,
+    tagIds: f.tagIds.length ? f.tagIds : undefined,
+    sprintIds: f.sprintIds.length ? f.sprintIds : undefined,
+    priority: f.priority ?? undefined,
+    sort: f.sort && f.sort !== "default" ? f.sort : undefined,
+    includeArchived: f.includeArchived || undefined,
+    parentOnly: f.hasChildren || undefined,
+  };
+}
+
+function clearAllFilters() {
+  filters.value = {
+    search: "",
+    assigneeIds: [],
+    responsibleIds: [],
+    createdByIds: [],
+    tagIds: [],
+    sprintIds: [],
+    priority: null,
+    sort: "default",
+    includeArchived: false,
+    hasChildren: false,
+  };
+  searchQuery.value = "";
+  if (isRemote.value) loadData();
+}
+
+async function loadFilterData() {
+  if (!isRemote.value) return;
+  try {
+    const [m, tg, sp] = await Promise.all([
+      getProjectMembers(props.projectSlug),
+      getProjectTags(props.projectSlug),
+      getProjectSprints(props.projectSlug),
+    ]);
+    members.value = m;
+    tags.value = tg;
+    sprints.value = sp;
+  } catch {
+    // non-critical
+  }
+}
+
+function openFilterSidebar() {
+  filterSidebarOpen.value = true;
+  if (members.value.length === 0) loadFilterData();
+}
+
+function updateFilter(patch: Partial<TaskFilters>) {
+  filters.value = { ...filters.value, ...patch };
+  if (isRemote.value) loadData();
+}
 
 function isLocked(taskId: number): boolean {
   return lockedTaskIds.value.has(taskId);
@@ -261,18 +433,6 @@ const statusActionsOpen = ref<number | null>(null);
 // ─── Board CRUD UI ───
 const showCreateBoard = ref(false);
 const newBoardName = ref("");
-const fabOpen = ref(false);
-
-function closeFabIfOutside(e: MouseEvent) {
-  if (!fabOpen.value) return;
-  const target = e.target as HTMLElement;
-  const menu = document.querySelector("[data-fab-menu]");
-  const trigger = document.querySelector("[data-fab-trigger]");
-  if (!menu || !trigger) return;
-  if (!menu.contains(target) && !trigger.contains(target)) {
-    fabOpen.value = false;
-  }
-}
 
 function closeStatusMenuIfOutside(e: MouseEvent) {
   if (statusActionsOpen.value === null) return;
@@ -332,8 +492,9 @@ async function loadData() {
   loading.value = true;
   error.value = null;
   try {
+    const params = buildTaskParams();
     const [taskResp, statusList, boardList] = await Promise.all([
-      listTasks(props.projectSlug),
+      listTasks(props.projectSlug, params),
       getStatuses(props.projectSlug),
       getBoards(props.projectSlug),
     ]);
@@ -350,7 +511,6 @@ async function loadData() {
 onMounted(() => {
   loadData();
   document.addEventListener("click", closeStatusMenuIfOutside, true);
-  document.addEventListener("click", closeFabIfOutside, true);
   if (isRemote.value) {
     wsConnect();
     wsUnsub = wsOnMessage(handleWSMessage);
@@ -359,36 +519,57 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", closeStatusMenuIfOutside, true);
-  document.removeEventListener("click", closeFabIfOutside, true);
   if (wsUnsub) {
     wsUnsub();
     wsUnsub = null;
   }
   wsDisconnect();
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-  if (countdownTimer) {
-    clearInterval(countdownTimer);
-    countdownTimer = null;
-  }
+  teardownAutoRefresh();
 });
 
 watch(() => props.projectSlug, loadData);
 
+// Reset filters when switching projects
+watch(
+  () => props.projectSlug,
+  () => {
+    searchQuery.value = "";
+    filters.value = {
+      search: "",
+      assigneeIds: [],
+      responsibleIds: [],
+      createdByIds: [],
+      tagIds: [],
+      sprintIds: [],
+      priority: null,
+      sort: "default",
+      includeArchived: false,
+      hasChildren: false,
+    };
+    members.value = [];
+    tags.value = [];
+    sprints.value = [];
+  },
+);
+
+// Debounced search → backend
+watch(searchQuery, (val) => {
+  if (!isRemote.value) return;
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    filters.value = { ...filters.value, search: val };
+    loadData();
+  }, 400);
+});
+
 let wsUnsub: (() => void) | null = null;
 
 // ─── Auto-refresh ───
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
-let countdownTimer: ReturnType<typeof setInterval> | null = null;
-const nextRefreshIn = ref(0);
-let nextRefreshAt = 0;
-
 async function silentRefresh() {
   try {
+    const params = buildTaskParams();
     const [taskResp, statusList, boardList] = await Promise.all([
-      listTasks(props.projectSlug),
+      listTasks(props.projectSlug, params),
       getStatuses(props.projectSlug),
       getBoards(props.projectSlug),
     ]);
@@ -431,39 +612,11 @@ async function silentRefresh() {
   }
 }
 
-function setupAutoRefresh() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-  if (countdownTimer) {
-    clearInterval(countdownTimer);
-    countdownTimer = null;
-  }
-  nextRefreshIn.value = 0;
-  if (
-    settings.value.autoRefreshEnabled &&
-    settings.value.autoRefreshInterval > 0
-  ) {
-    nextRefreshAt = Date.now() + settings.value.autoRefreshInterval * 1000;
-    nextRefreshIn.value = settings.value.autoRefreshInterval;
-    refreshTimer = setInterval(() => {
-      silentRefresh();
-      nextRefreshAt = Date.now() + settings.value.autoRefreshInterval * 1000;
-    }, settings.value.autoRefreshInterval * 1000);
-    countdownTimer = setInterval(() => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((nextRefreshAt - Date.now()) / 1000),
-      );
-      nextRefreshIn.value = remaining;
-    }, 1000);
-  }
-}
+// setupAutoRefresh is provided by useRefreshCountdown composable
 
 watch(
   () => [settings.value.autoRefreshEnabled, settings.value.autoRefreshInterval],
-  setupAutoRefresh,
+  () => setupAutoRefresh(silentRefresh),
   { immediate: true },
 );
 
@@ -487,7 +640,7 @@ function handleWSMessage(msg: WSMessage) {
     case "task.drag.start": {
       if (msg.data.userId !== currentUserId.value) {
         const newMap = new Map(lockedTaskIds.value);
-        newMap.set(msg.data.taskId, msg.data.userId);
+        newMap.set(msg.data.taskId as number, msg.data.userId as number);
         lockedTaskIds.value = newMap;
       }
       break;
@@ -495,13 +648,16 @@ function handleWSMessage(msg: WSMessage) {
     case "task.drag.end": {
       if (msg.data.userId !== currentUserId.value) {
         const newMap = new Map(lockedTaskIds.value);
-        newMap.delete(msg.data.taskId);
+        newMap.delete(msg.data.taskId as number);
         lockedTaskIds.value = newMap;
       }
       break;
     }
     case "task.reordered": {
-      const { statusId, taskIds } = msg.data;
+      const { statusId, taskIds } = msg.data as {
+        statusId: number | null;
+        taskIds: number[];
+      };
       const sid = statusId ?? null;
       const taskMap = new Map(tasks.value.map((tk) => [tk.id, tk]));
       const statusObj =
@@ -616,7 +772,7 @@ async function onDropToCell(
   const idx = tasks.value.findIndex((tk) => tk.id === taskId);
   if (idx === -1) return;
   const oldTask = tasks.value[idx];
-  const status = statuses.value.find((s) => s.id === statusId) ?? null;
+  const status = statuses.value.find((s) => s.id === statusId);
   if (oldTask.status?.id === statusId && oldTask.boardId === boardId) return;
 
   const updatedTask: Task = {
@@ -831,7 +987,6 @@ async function handleCreateBoard() {
     await createBoard(props.projectSlug, newBoardName.value.trim());
     newBoardName.value = "";
     showCreateBoard.value = false;
-    fabOpen.value = false;
     await loadData();
   } catch (e) {
     error.value = mapApiError(e, t);
@@ -889,6 +1044,55 @@ async function handleDeleteBoard(boardId: number) {
     >
       <!-- Toolbar -->
       <div class="flex flex-wrap items-end gap-4">
+        <!-- Search & Filters (remote only) -->
+        <div v-if="isRemote" class="flex items-center gap-2">
+          <div class="relative flex items-center">
+            <Search
+              :size="15"
+              class="pointer-events-none absolute left-2.5 text-muted-foreground"
+            />
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="input-base h-9 w-48 pl-8 text-sm"
+              :placeholder="t('boardFilters.searchPlaceholder')"
+            />
+            <button
+              v-if="searchQuery"
+              class="absolute right-2 text-muted-foreground transition hover:text-foreground"
+              @click="searchQuery = ''"
+            >
+              <X :size="14" />
+            </button>
+          </div>
+
+          <button
+            v-if="hasActiveFilters"
+            type="button"
+            class="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 text-sm font-medium text-destructive transition hover:bg-destructive/20"
+            @click="clearAllFilters"
+          >
+            <X :size="15" />
+            {{ t("boardFilters.clear") }}
+          </button>
+
+          <button
+            type="button"
+            class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            @click="openFilterSidebar"
+          >
+            <SlidersHorizontal :size="15" />
+            {{ t("boardFilters.button") }}
+            <span
+              v-if="activeFilterCount > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-xs font-semibold text-primary-foreground"
+            >
+              {{ activeFilterCount }}
+            </span>
+          </button>
+        </div>
+
+        <!-- Column width controls -->
         <div class="flex items-center gap-1.5">
           <div
             class="flex items-center gap-0.5 rounded-lg border border-foreground/10 bg-muted/50 p-0.5"
@@ -931,13 +1135,26 @@ async function handleDeleteBoard(boardId: number) {
           </button>
         </div>
 
-        <!-- Auto-refresh countdown -->
         <div
-          v-if="settings.autoRefreshEnabled && nextRefreshIn > 0"
-          class="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground"
+          v-if="!readOnly && orgType === 'local'"
+          class="ml-auto flex items-center gap-2"
         >
-          <RefreshCw :size="12" class="shrink-0" />
-          <span>{{ t("settings.nextRefreshIn") }} {{ nextRefreshIn }}s</span>
+          <button
+            type="button"
+            class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            @click="showCreateStatus = true"
+          >
+            <Columns3 :size="15" />
+            {{ t("board.createColumn") }}
+          </button>
+          <button
+            type="button"
+            class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            @click="showCreateBoard = true"
+          >
+            <LayoutGrid :size="15" />
+            {{ t("board.createBoard") }}
+          </button>
         </div>
       </div>
 
@@ -1110,6 +1327,8 @@ async function handleDeleteBoard(boardId: number) {
                     :task="task"
                     :draggable="!readOnly && !isLocked(task.id)"
                     :locked="isLocked(task.id)"
+                    :org-slug="orgSlug"
+                    :project-slug="projectSlug"
                     @dragstart="onDragStart(task.id)"
                     @dragend="onDragEnd"
                     @dragover="onTaskDragOver(task.id, $event)"
@@ -1251,6 +1470,8 @@ async function handleDeleteBoard(boardId: number) {
                       :task="task"
                       :draggable="!readOnly && !isLocked(task.id)"
                       :locked="isLocked(task.id)"
+                      :org-slug="orgSlug"
+                      :project-slug="projectSlug"
                       @dragstart="onDragStart(task.id)"
                       @dragend="onDragEnd"
                       @dragover="onTaskDragOver(task.id, $event)"
@@ -1287,240 +1508,393 @@ async function handleDeleteBoard(boardId: number) {
     </div>
   </div>
 
-  <!-- Composite FAB: Add status or board (local only) -->
-  <div
-    v-if="!readOnly && orgType === 'local'"
-    class="fixed bottom-6 right-6 z-10 flex flex-col items-end gap-2"
-  >
-    <!-- Dropdown menu -->
-    <div
-      v-if="fabOpen"
-      data-fab-menu
-      class="dropdown-panel mb-1 w-48 rounded-xl p-2"
-    >
-      <button
-        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/80 transition hover:bg-muted"
-        @click="
-          showCreateBoard = true;
-          fabOpen = false;
-        "
-      >
-        <LayoutGrid :size="16" />
-        {{ t("board.addBoard") }}
-      </button>
-      <button
-        class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/80 transition hover:bg-muted"
-        @click="
-          showCreateStatus = true;
-          fabOpen = false;
-        "
-      >
-        <Columns3 :size="16" />
-        {{ t("board.addStatus") }}
-      </button>
-    </div>
-    <!-- FAB trigger -->
-    <button
-      data-fab-trigger
-      class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:bg-primary/90"
-      :title="fabOpen ? '' : t('board.addStatus')"
-      @click="fabOpen = !fabOpen"
-    >
-      <Plus
-        :size="20"
-        class="transition-transform duration-200"
-        :class="fabOpen ? 'rotate-45' : ''"
-      />
-    </button>
-  </div>
-
   <!-- Create board modal -->
-  <div
-    v-if="showCreateBoard"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    @click.self="showCreateBoard = false"
+  <Form
+    as="modal"
+    :open="showCreateBoard"
+    @update:open="(v) => (showCreateBoard = v)"
+    @submit="handleCreateBoard"
   >
-    <div class="dropdown-panel w-80 rounded-xl p-4">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="text-sm font-semibold">{{ t("board.addBoard") }}</span>
+    <template #header>
+      <h2 class="text-sm font-semibold">{{ t("board.addBoard") }}</h2>
+    </template>
+    <div class="space-y-3">
+      <div>
+        <label class="form-hint">{{ t("board.boardName") }}</label>
+        <input
+          v-model="newBoardName"
+          class="input-base mt-1 text-sm"
+          :placeholder="t('board.boardName')"
+        />
+      </div>
+    </div>
+    <template #submit>
+      <div class="flex justify-end gap-2">
         <button
-          class="rounded p-1 text-muted-foreground transition hover:bg-muted"
+          type="button"
+          class="btn-small"
           @click="showCreateBoard = false"
         >
-          <X :size="14" />
-        </button>
-      </div>
-      <div class="space-y-3">
-        <div>
-          <label class="form-hint">{{ t("board.boardName") }}</label>
-          <input
-            v-model="newBoardName"
-            class="input-base mt-1 text-sm"
-            :placeholder="t('board.boardName')"
-            @keyup.enter="handleCreateBoard"
-          />
-        </div>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button class="btn-small" @click="showCreateBoard = false">
           {{ t("board.cancel") }}
         </button>
         <button
+          type="submit"
           class="btn-primary btn-small"
           :disabled="!newBoardName.trim()"
-          @click="handleCreateBoard"
         >
           {{ t("board.create") }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </Form>
 
   <!-- Create status modal -->
-  <div
-    v-if="showCreateStatus"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    @click.self="showCreateStatus = false"
+  <Form
+    as="modal"
+    :open="showCreateStatus"
+    @update:open="(v) => (showCreateStatus = v)"
+    @submit="handleCreateStatus"
   >
-    <div class="dropdown-panel w-80 rounded-xl p-4">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="text-sm font-semibold">{{ t("board.addStatus") }}</span>
+    <template #header>
+      <h2 class="text-sm font-semibold">{{ t("board.addStatus") }}</h2>
+    </template>
+    <div class="space-y-3">
+      <div>
+        <label class="form-hint">{{ t("board.statusName") }}</label>
+        <input
+          v-model="newStatusName"
+          class="input-base mt-1 text-sm"
+          :placeholder="t('board.statusName')"
+        />
+      </div>
+      <div>
+        <label class="form-hint">{{ t("board.statusColor") }}</label>
+        <div class="mt-1 flex items-center gap-2">
+          <input
+            v-model="newStatusColor"
+            type="color"
+            class="h-9 w-14 rounded border-0 bg-transparent p-0"
+          />
+          <input v-model="newStatusColor" class="input-base flex-1 text-sm" />
+        </div>
+      </div>
+    </div>
+    <template #submit>
+      <div class="flex justify-end gap-2">
         <button
-          class="rounded p-1 text-muted-foreground transition hover:bg-muted"
+          type="button"
+          class="btn-small"
           @click="showCreateStatus = false"
         >
-          <X :size="14" />
-        </button>
-      </div>
-      <div class="space-y-3">
-        <div>
-          <label class="form-hint">{{ t("board.statusName") }}</label>
-          <input
-            v-model="newStatusName"
-            class="input-base mt-1 text-sm"
-            :placeholder="t('board.statusName')"
-            @keyup.enter="handleCreateStatus"
-          />
-        </div>
-        <div>
-          <label class="form-hint">{{ t("board.statusColor") }}</label>
-          <div class="mt-1 flex items-center gap-2">
-            <input
-              v-model="newStatusColor"
-              type="color"
-              class="h-9 w-14 rounded border-0 bg-transparent p-0"
-            />
-            <input
-              v-model="newStatusColor"
-              class="input-base flex-1 text-sm"
-              @keyup.enter="handleCreateStatus"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button class="btn-small" @click="showCreateStatus = false">
           {{ t("board.cancel") }}
         </button>
         <button
+          type="submit"
           class="btn-primary btn-small"
           :disabled="!newStatusName.trim()"
-          @click="handleCreateStatus"
         >
           {{ t("board.create") }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </Form>
 
   <!-- Edit status modal -->
-  <div
-    v-if="editStatusTarget"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    @click.self="cancelEditStatus"
+  <Form
+    as="modal"
+    :open="!!editStatusTarget"
+    @update:open="
+      (v) => {
+        if (!v) cancelEditStatus();
+      }
+    "
+    @submit="handleUpdateStatus"
   >
-    <div class="dropdown-panel w-80 rounded-xl p-4">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="text-sm font-semibold">{{ t("board.editStatus") }}</span>
-        <button
-          class="rounded p-1 text-muted-foreground transition hover:bg-muted"
-          @click="cancelEditStatus"
-        >
-          <X :size="14" />
-        </button>
+    <template #header>
+      <h2 class="text-sm font-semibold">{{ t("board.editStatus") }}</h2>
+    </template>
+    <div class="space-y-3">
+      <div>
+        <label class="form-hint">{{ t("board.statusName") }}</label>
+        <input v-model="editStatusName" class="input-base mt-1 text-sm" />
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="form-hint">{{ t("board.statusName") }}</label>
+      <div>
+        <label class="form-hint">{{ t("board.statusColor") }}</label>
+        <div class="mt-1 flex items-center gap-2">
           <input
-            v-model="editStatusName"
-            class="input-base mt-1 text-sm"
-            @keyup.enter="handleUpdateStatus"
+            v-model="editStatusColor"
+            type="color"
+            class="h-9 w-14 rounded border-0 bg-transparent p-0"
           />
-        </div>
-        <div>
-          <label class="form-hint">{{ t("board.statusColor") }}</label>
-          <div class="mt-1 flex items-center gap-2">
-            <input
-              v-model="editStatusColor"
-              type="color"
-              class="h-9 w-14 rounded border-0 bg-transparent p-0"
-            />
-            <input
-              v-model="editStatusColor"
-              class="input-base flex-1 text-sm"
-              @keyup.enter="handleUpdateStatus"
-            />
-          </div>
+          <input v-model="editStatusColor" class="input-base flex-1 text-sm" />
         </div>
       </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button class="btn-small" @click="cancelEditStatus">
+    </div>
+    <template #submit>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn-small" @click="cancelEditStatus">
           {{ t("board.cancel") }}
         </button>
         <button
+          type="submit"
           class="btn-primary btn-small"
           :disabled="!editStatusName.trim()"
-          @click="handleUpdateStatus"
         >
           {{ t("board.save") }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </Form>
 
   <!-- Delete status modal -->
-  <div
-    v-if="deleteStatusTarget"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    @click.self="cancelDeleteStatus"
+  <Form
+    as="modal"
+    destructive
+    :open="!!deleteStatusTarget"
+    @update:open="
+      (v) => {
+        if (!v) cancelDeleteStatus();
+      }
+    "
+    @submit="handleDeleteStatus"
   >
-    <div class="dropdown-panel w-80 rounded-xl p-4">
-      <div class="mb-3 flex items-center gap-2">
+    <template #header>
+      <div class="flex items-center gap-2">
         <AlertTriangle :size="18" class="text-destructive" />
-        <span class="text-sm font-semibold">{{ t("board.deleteStatus") }}</span>
+        <h2 class="text-sm font-semibold">{{ t("board.deleteStatus") }}</h2>
       </div>
-      <p class="mb-4 text-sm text-muted-foreground">
-        {{ t("board.deleteStatusConfirm") }}
-      </p>
+    </template>
+    <p class="text-sm text-muted-foreground">
+      {{ t("board.deleteStatusConfirm") }}
+    </p>
+    <template #submit>
       <div class="flex justify-end gap-2">
-        <button class="btn-small" @click="cancelDeleteStatus">
+        <button type="button" class="btn-small" @click="cancelDeleteStatus">
           {{ t("board.cancel") }}
         </button>
         <button
+          type="submit"
           class="btn-small bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          @click="handleDeleteStatus"
         >
           {{ t("board.delete") }}
         </button>
       </div>
-    </div>
-  </div>
+    </template>
+  </Form>
+
+  <!-- Filter sidebar (remote only) -->
+  <Teleport to="body">
+    <Transition name="filter-sidebar">
+      <div
+        v-if="filterSidebarOpen"
+        class="fixed inset-0 z-50 flex justify-end bg-black/50"
+        @click.self="filterSidebarOpen = false"
+      >
+        <div
+          class="filter-sidebar-panel flex h-full w-80 flex-col dropdown-panel rounded-none border-l border-foreground/10"
+        >
+          <!-- Header -->
+          <div
+            class="flex items-center justify-between border-b border-foreground/10 px-5 py-4"
+          >
+            <h2 class="text-base font-semibold text-foreground">
+              {{ t("boardFilters.title") }}
+            </h2>
+            <button
+              class="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              @click="filterSidebarOpen = false"
+            >
+              <X :size="18" />
+            </button>
+          </div>
+
+          <!-- Body -->
+          <div class="flex-1 overflow-y-auto px-5 py-4">
+            <div class="flex flex-col gap-4">
+              <!-- Assignee -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.assigneeLabel")
+                }}</label>
+                <MultiSelectFilter
+                  :model-value="filters.assigneeIds"
+                  :options="memberOptions"
+                  :placeholder="t('boardFilters.allAssignees')"
+                  @update:model-value="updateFilter({ assigneeIds: $event })"
+                />
+              </div>
+
+              <!-- Responsible -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.responsibleLabel")
+                }}</label>
+                <MultiSelectFilter
+                  :model-value="filters.responsibleIds"
+                  :options="memberOptions"
+                  :placeholder="t('boardFilters.allResponsibles')"
+                  @update:model-value="updateFilter({ responsibleIds: $event })"
+                />
+              </div>
+
+              <!-- Creator -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.creatorLabel")
+                }}</label>
+                <MultiSelectFilter
+                  :model-value="filters.createdByIds"
+                  :options="memberOptions"
+                  :placeholder="t('boardFilters.allCreators')"
+                  @update:model-value="updateFilter({ createdByIds: $event })"
+                />
+              </div>
+
+              <!-- Tags -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.tagLabel")
+                }}</label>
+                <MultiSelectFilter
+                  :model-value="filters.tagIds"
+                  :options="tagOptions"
+                  :placeholder="t('boardFilters.allTags')"
+                  @update:model-value="updateFilter({ tagIds: $event })"
+                />
+              </div>
+
+              <!-- Sprints -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.sprintLabel")
+                }}</label>
+                <MultiSelectFilter
+                  :model-value="filters.sprintIds"
+                  :options="sprintOptions"
+                  :placeholder="t('boardFilters.allSprints')"
+                  @update:model-value="updateFilter({ sprintIds: $event })"
+                />
+              </div>
+
+              <!-- Priority -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.priorityLabel")
+                }}</label>
+                <select
+                  :value="filters.priority ?? ''"
+                  class="input-base h-9 text-sm"
+                  @change="
+                    updateFilter({
+                      priority: ($event.target as HTMLSelectElement).value
+                        ? Number(($event.target as HTMLSelectElement).value)
+                        : null,
+                    })
+                  "
+                >
+                  <option value="">
+                    {{ t("boardFilters.allPriorities") }}
+                  </option>
+                  <option
+                    v-for="p in priorityOptions"
+                    :key="p.value"
+                    :value="p.value"
+                  >
+                    {{ p.label }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Include archived -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.archivedLabel")
+                }}</label>
+                <label
+                  class="flex h-9 items-center gap-2 whitespace-nowrap text-sm text-foreground cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-foreground/20"
+                    :checked="filters.includeArchived"
+                    @change="
+                      updateFilter({
+                        includeArchived: !filters.includeArchived,
+                      })
+                    "
+                  />
+                  <span>{{ t("boardFilters.includeArchived") }}</span>
+                </label>
+              </div>
+
+              <!-- Has children -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.hasChildrenLabel")
+                }}</label>
+                <label
+                  class="flex h-9 items-center gap-2 whitespace-nowrap text-sm text-foreground cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-foreground/20"
+                    :checked="filters.hasChildren"
+                    @change="
+                      updateFilter({ hasChildren: !filters.hasChildren })
+                    "
+                  />
+                  <span>{{ t("boardFilters.hasChildren") }}</span>
+                </label>
+              </div>
+
+              <!-- Sort -->
+              <div class="flex w-full flex-col gap-1.5">
+                <label class="text-xs font-medium text-foreground/70">{{
+                  t("boardFilters.sortLabel")
+                }}</label>
+                <select
+                  :value="filters.sort"
+                  class="input-base h-9 text-sm"
+                  @change="
+                    updateFilter({
+                      sort:
+                        ($event.target as HTMLSelectElement).value || 'default',
+                    })
+                  "
+                >
+                  <option
+                    v-for="s in sortOptions"
+                    :key="s.value"
+                    :value="s.value"
+                  >
+                    {{ s.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer: reset -->
+          <div
+            v-if="hasActiveFilters"
+            class="border-t border-foreground/10 px-5 py-4"
+          >
+            <button
+              class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-destructive bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90"
+              @click="clearAllFilters"
+            >
+              <X :size="16" />
+              {{ t("boardFilters.clear") }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
 .dropdown-panel {
-  border: 1px solid hsl(var(--border, 240 5% 90%));
   border-radius: 0.5rem;
   background: hsl(var(--background, 0 0% 100%));
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
@@ -1545,6 +1919,22 @@ async function handleDeleteBoard(boardId: number) {
 }
 .board-move {
   transition: transform 0.3s ease;
+}
+.filter-sidebar-enter-active,
+.filter-sidebar-leave-active {
+  transition: opacity 0.25s ease;
+}
+.filter-sidebar-enter-active .filter-sidebar-panel,
+.filter-sidebar-leave-active .filter-sidebar-panel {
+  transition: transform 0.25s ease;
+}
+.filter-sidebar-enter-from,
+.filter-sidebar-leave-to {
+  opacity: 0;
+}
+.filter-sidebar-enter-from .filter-sidebar-panel,
+.filter-sidebar-leave-to .filter-sidebar-panel {
+  transform: translateX(100%);
 }
 .agile-insertion-line {
   height: 2px;

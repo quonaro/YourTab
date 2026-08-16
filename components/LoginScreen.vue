@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { LogIn, Loader2 } from "lucide-vue-next";
 import { useSettings } from "@/composables/useSettings";
 import { useI18n } from "@/composables/useI18n";
+import Logo from "@/components/Logo.vue";
 
 const { t } = useI18n();
 
@@ -32,6 +33,7 @@ function handleLogin() {
 
 <template>
   <div class="flex h-screen flex-col items-center justify-center gap-6">
+    <Logo path="/logos/logo-cat.svg" :accent="settings.accent" :size="64" />
     <div class="text-center">
       <h1 class="text-3xl font-semibold text-foreground">
         {{ t("app.name") }}

@@ -99,6 +99,7 @@ export function useLocalApi() {
   async function getBoards(projectSlug: string): Promise<Board[]> {
     const project = await db.getProjectBySlug(projectSlug);
     if (!project) return [];
+    await db.ensureDefaultBoard(project.id);
     return db.listBoards(project.id);
   }
 

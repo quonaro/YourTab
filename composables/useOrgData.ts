@@ -1,7 +1,7 @@
 import { computed, type Ref } from "vue";
 import { useApi } from "./useApi";
 import { useLocalApi } from "./useLocalApi";
-import type { Task, TaskStatus, Project, Board, TaskListResponse } from "@/lib/types";
+import type { Task, TaskStatus, Project, Board, TaskListResponse, UserInfo, TaskTag, SprintInfo, TaskListParams } from "@/lib/types";
 
 export type OrgType = "local" | "remote";
 
@@ -25,9 +25,9 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     return [];
   }
 
-  async function listTasks(projectSlug: string): Promise<TaskListResponse> {
+  async function listTasks(projectSlug: string, params?: TaskListParams): Promise<TaskListResponse> {
     if (isLocal.value) return localApi.listTasks(projectSlug);
-    return remoteApi.listTasks(projectSlug);
+    return remoteApi.listTasks(projectSlug, params);
   }
 
   async function getStatuses(projectSlug: string): Promise<TaskStatus[]> {
@@ -83,6 +83,21 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
   async function getBoards(projectSlug: string): Promise<Board[]> {
     if (isLocal.value) return localApi.getBoards(projectSlug);
     return remoteApi.getBoards(projectSlug);
+  }
+
+  async function getProjectMembers(projectSlug: string): Promise<UserInfo[]> {
+    if (isLocal.value) return [];
+    return remoteApi.getProjectMembers(projectSlug);
+  }
+
+  async function getProjectTags(projectSlug: string): Promise<TaskTag[]> {
+    if (isLocal.value) return [];
+    return remoteApi.getProjectTags(projectSlug);
+  }
+
+  async function getProjectSprints(projectSlug: string): Promise<SprintInfo[]> {
+    if (isLocal.value) return [];
+    return remoteApi.getProjectSprints(projectSlug);
   }
 
   async function createBoard(projectSlug: string, name: string): Promise<Board> {
@@ -148,6 +163,9 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     updateTask,
     createTask,
     getBoards,
+    getProjectMembers,
+    getProjectTags,
+    getProjectSprints,
     createBoard,
     deleteBoard,
     dragTask,

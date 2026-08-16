@@ -27,6 +27,7 @@ declare global {
   const useI18n: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useI18n')['useI18n']
   const useLocalApi: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useLocalApi')['useLocalApi']
   const useOrgData: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useOrgData')['useOrgData']
+  const useRefreshCountdown: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useRefreshCountdown')['useRefreshCountdown']
   const useSettings: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useSettings')['useSettings']
   const useTheme: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useTheme')['useTheme']
   const useWebSocket: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useWebSocket')['useWebSocket']

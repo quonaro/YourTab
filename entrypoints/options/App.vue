@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
+import Logo from "@/components/Logo.vue";
 import type { Language } from "@/lib/settings";
 
 const { t } = useI18n();
@@ -39,7 +40,10 @@ function handleSave() {
 <template>
   <div class="min-h-screen bg-background text-foreground p-8">
     <div class="mx-auto max-w-2xl space-y-6">
-      <h1 class="text-2xl font-semibold">{{ t("options.title") }}</h1>
+      <div class="flex items-center gap-3">
+        <Logo path="/logos/logo-cat.svg" :accent="settings.accent" :size="40" />
+        <h1 class="text-2xl font-semibold">{{ t("options.title") }}</h1>
+      </div>
 
       <div class="card-base space-y-4">
         <div>
@@ -56,7 +60,9 @@ function handleSave() {
         <div>
           <label class="form-label">{{ t("options.theme") }}</label>
           <select v-model="theme" class="input-base mt-1">
-            <option v-for="tm in themes" :key="tm" :value="tm">{{ tm }}</option>
+            <option v-for="tm in themes" :key="tm" :value="tm">
+              {{ t(`themes.${tm}`) }}
+            </option>
           </select>
         </div>
 

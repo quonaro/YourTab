@@ -7,17 +7,24 @@ import {
   Pencil,
   X,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-vue-next";
 import { useI18n } from "@/composables/useI18n";
+import { useSettings } from "@/composables/useSettings";
+import { useRefreshCountdown } from "@/composables/useRefreshCountdown";
 import type { Project } from "@/lib/types";
+import Form from "@/components/Form.vue";
 
 const { t } = useI18n();
+const { settings } = useSettings();
+const { nextRefreshIn } = useRefreshCountdown();
 
 const props = defineProps<{
   projects: Project[];
   selectedProject: string | null;
   loading?: boolean;
   canCreate?: boolean;
+  isRemote?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -165,83 +172,103 @@ function confirmDelete() {
       </div>
     </div>
 
-    <!-- Edit project modal -->
+    <!-- Auto-refresh countdown -->
     <div
-      v-if="editTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="cancelEdit"
+      v-if="isRemote && settings.autoRefreshEnabled && nextRefreshIn > 0"
+      class="flex items-center gap-1.5 border-t border-foreground/10 px-3 py-2 text-xs text-muted-foreground"
     >
-      <div class="dropdown-panel w-80 rounded-xl p-4">
-        <div class="mb-3 flex items-center gap-2">
+      <RefreshCw :size="12" class="shrink-0" />
+      <span>{{ t("settings.nextRefreshIn") }} {{ nextRefreshIn }}s</span>
+    </div>
+
+    <!-- Edit project modal -->
+    <Form
+      as="modal"
+      :open="!!editTarget"
+      @update:open="
+        (v) => {
+          if (!v) cancelEdit();
+        }
+      "
+      @submit="handleEditSave"
+    >
+      <template #header>
+        <div class="flex items-center gap-2">
           <Pencil :size="18" class="text-primary" />
-          <span class="text-sm font-semibold">{{
-            t("sidebar.editProject")
-          }}</span>
+          <h2 class="text-sm font-semibold">{{ t("sidebar.editProject") }}</h2>
         </div>
-        <div class="space-y-3">
-          <div>
-            <label class="form-hint">{{ t("sidebar.projectName") }}</label>
-            <input
-              v-model="editName"
-              class="input-base mt-1 text-sm"
-              :placeholder="t('sidebar.projectName')"
-              @keyup.enter="handleEditSave"
-            />
-          </div>
-          <div>
-            <label class="form-hint">{{ t("sidebar.projectDesc") }}</label>
-            <input
-              v-model="editDesc"
-              class="input-base mt-1 text-sm"
-              :placeholder="t('sidebar.projectDesc')"
-              @keyup.enter="handleEditSave"
-            />
-          </div>
+      </template>
+      <div class="space-y-3">
+        <div>
+          <label class="form-hint">{{ t("sidebar.projectName") }}</label>
+          <input
+            v-model="editName"
+            class="input-base mt-1 text-sm"
+            :placeholder="t('sidebar.projectName')"
+          />
         </div>
-        <div class="mt-4 flex justify-end gap-2">
-          <button class="btn-small" @click="cancelEdit">
+        <div>
+          <label class="form-hint">{{ t("sidebar.projectDesc") }}</label>
+          <input
+            v-model="editDesc"
+            class="input-base mt-1 text-sm"
+            :placeholder="t('sidebar.projectDesc')"
+          />
+        </div>
+      </div>
+      <template #submit>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-small" @click="cancelEdit">
             {{ t("sidebar.editCancelButton") }}
           </button>
           <button
+            type="submit"
             class="btn-primary btn-small"
             :disabled="!editName.trim()"
-            @click="handleEditSave"
           >
             {{ t("sidebar.editSaveButton") }}
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </Form>
 
     <!-- Delete confirmation modal -->
-    <div
-      v-if="deleteTarget"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="deleteTarget = null"
+    <Form
+      as="modal"
+      destructive
+      :open="!!deleteTarget"
+      @update:open="
+        (v) => {
+          if (!v) deleteTarget = null;
+        }
+      "
+      @submit="confirmDelete"
     >
-      <div class="dropdown-panel w-80 rounded-xl p-4">
-        <div class="mb-3 flex items-center gap-2">
+      <template #header>
+        <div class="flex items-center gap-2">
           <AlertTriangle :size="18" class="text-destructive" />
-          <span class="text-sm font-semibold">{{
-            t("sidebar.deleteConfirmTitle")
-          }}</span>
+          <h2 class="text-sm font-semibold">
+            {{ t("sidebar.deleteConfirmTitle") }}
+          </h2>
         </div>
-        <p class="mb-4 text-sm text-muted-foreground">
-          {{ t("sidebar.deleteConfirmText") }}
-        </p>
+      </template>
+      <p class="text-sm text-muted-foreground">
+        {{ t("sidebar.deleteConfirmText") }}
+      </p>
+      <template #submit>
         <div class="flex justify-end gap-2">
-          <button class="btn-small" @click="deleteTarget = null">
+          <button type="button" class="btn-small" @click="deleteTarget = null">
             {{ t("sidebar.deleteCancelButton") }}
           </button>
           <button
+            type="submit"
             class="btn-small bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            @click="confirmDelete"
           >
             {{ t("sidebar.deleteConfirmButton") }}
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </Form>
   </aside>
 </template>
 

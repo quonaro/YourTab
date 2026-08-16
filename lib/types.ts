@@ -97,3 +97,51 @@ export interface WorkspaceResponse {
 export interface WorkspaceNested {
   organizations: (Organization & { projects: Project[] })[];
 }
+
+export interface UserInfo {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+}
+
+export interface TaskTag {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface SprintInfo {
+  id: number;
+  name: string;
+  endDate?: string;
+  isArchived?: boolean;
+  isOrgSprint?: boolean;
+}
+
+export interface TaskFilters {
+  search: string;
+  assigneeIds: number[];
+  responsibleIds: number[];
+  createdByIds: number[];
+  tagIds: number[];
+  sprintIds: number[];
+  priority: number | null;
+  sort: string;
+  includeArchived: boolean;
+  hasChildren: boolean;
+}
+
+export interface TaskListParams {
+  search?: string;
+  assigneeIds?: number[];
+  responsibleIds?: number[];
+  createdByIds?: number[];
+  tagIds?: number[];
+  sprintIds?: number[];
+  priority?: number | null;
+  sort?: string;
+  includeArchived?: boolean;
+  parentOnly?: boolean;
+}

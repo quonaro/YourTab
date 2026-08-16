@@ -4,7 +4,11 @@ const DEFAULT_API_DOMAIN = "https://yourtask.app";
 
 export function getApiDomain(): string {
   const settings = readSettings();
-  return settings.apiDomain || DEFAULT_API_DOMAIN;
+  const domain = settings.apiDomain?.trim() || DEFAULT_API_DOMAIN;
+  if (!/^https?:\/\//i.test(domain)) {
+    return `https://${domain}`;
+  }
+  return domain;
 }
 
 export function getApiBase(): string {

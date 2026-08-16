@@ -93,6 +93,13 @@ export async function createProject(name: string, description?: string): Promise
     createdAt: new Date().toISOString(),
   };
   await tx("projects", "readwrite", (s) => s.add(project));
+
+  // Initialize default statuses and board (mirrors backend InitializeProject)
+  await createStatus(project.id, "To Do", "#6b7280", 0);
+  await createStatus(project.id, "In Progress", "#3b82f6", 1);
+  await createStatus(project.id, "Done", "#10b981", 2, true);
+  await createBoard(project.id, "Основная доска", 0);
+
   return project;
 }
 
@@ -139,7 +146,7 @@ export async function updateProject(id: number, name: string, description?: stri
 
 export async function deleteProject(id: number): Promise<void> {
   const db = await openDB();
-  const transaction = db.transaction(["projects", "statuses", "tasks"], "readwrite");
+  const transaction = db.transaction(["projects", "statuses", "tasks", "boards"], "readwrite");
   transaction.objectStore("projects").delete(id);
 
   // Delete statuses for this project
@@ -156,6 +163,14 @@ export async function deleteProject(id: number): Promise<void> {
   const taskReq = taskIdx.getAllKeys(id);
   taskReq.onsuccess = () => {
     for (const key of taskReq.result) taskStore.delete(key);
+  };
+
+  // Delete boards for this project
+  const boardStore = transaction.objectStore("boards");
+  const boardIdx = boardStore.index("projectId");
+  const boardReq = boardIdx.getAllKeys(id);
+  boardReq.onsuccess = () => {
+    for (const key of boardReq.result) boardStore.delete(key);
   };
 
   return new Promise((resolve, reject) => {
@@ -381,6 +396,14 @@ export async function listBoards(projectId: number): Promise<Board[]> {
   });
 }
 
+// EnsureDefaultBoard creates a default board for a project if no boards exist yet.
+// Idempotent — safe to call multiple times. Mirrors backend EnsureDefaultBoard.
+export async function ensureDefaultBoard(projectId: number): Promise<void> {
+  const existing = await listBoards(projectId);
+  if (existing.length > 0) return;
+  await createBoard(projectId, "Основная доска", 0);
+}
+
 export async function deleteBoard(id: number): Promise<void> {
   await tx("boards", "readwrite", (s) => s.delete(id));
 }
@@ -392,7 +415,5 @@ export async function seedDefaultData(): Promise<void> {
   if (projects.length > 0) return;
 
   const project = await createProject("My First Project", "Default local project");
-  await createStatus(project.id, "To Do", "#6b7280", 0);
-  await createStatus(project.id, "In Progress", "#3b82f6", 1);
-  await createStatus(project.id, "Done", "#10b981", 2, true);
+  // createProject already creates default statuses and a board
 }

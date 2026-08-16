@@ -64,6 +64,10 @@
   .badge-primary {
     @apply inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary;
   }
+
+  .form-error {
+    @apply rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive;
+  }
 }
 
 :root {
@@ -81,7 +85,7 @@
 .dark {
   --background: 0 0% 7%;
   --foreground: 0 0% 96%;
-  --card: 0 0% 10%;
+  --card: 0 0% 13%;
   --muted: 0 0% 14%;
   --muted-foreground: 215 20.2% 65.1%;
   --primary: 245 60% 55%;

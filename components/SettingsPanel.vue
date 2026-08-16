@@ -196,7 +196,9 @@ function close() {
             class="input-base mt-1 text-sm"
             @change="handleSave"
           >
-            <option v-for="tm in themes" :key="tm" :value="tm">{{ tm }}</option>
+            <option v-for="tm in themes" :key="tm" :value="tm">
+              {{ t(`themes.${tm}`) }}
+            </option>
           </select>
         </div>
 
