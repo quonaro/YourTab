@@ -82,7 +82,7 @@ jobs:
       - name: Prepare AMO source
         run: |
           mkdir -p amo-source
-          unzip -q artifacts/yourtab-extension-firefox*.zip -d amo-source
+          unzip -q artifacts/*-firefox.zip -d amo-source
           ls -la amo-source/
 
       - name: Submit to AMO
