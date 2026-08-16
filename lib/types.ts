@@ -31,6 +31,7 @@ export interface Project {
   organizationId: number;
   archived?: boolean;
   isFavorite?: boolean;
+  role?: string;
   createdAt?: string;
 }
 
@@ -59,6 +60,17 @@ export interface TaskStatusInfo {
   taskCount?: number;
 }
 
+export interface ChildTaskInfo {
+  id: number;
+  shortId: string;
+  title: string;
+  statusIsEnd: boolean;
+  statusName?: string;
+  statusColor?: string;
+  priority: number;
+  endDate?: string | null;
+}
+
 export interface Task {
   id: number;
   shortId: string;
@@ -71,6 +83,7 @@ export interface Task {
   boardId?: number;
   parentTaskId?: number;
   childrenCount?: number;
+  children?: ChildTaskInfo[];
   status?: TaskStatusInfo;
   assignees?: TaskAssignee[];
   responsibles?: TaskAssignee[];

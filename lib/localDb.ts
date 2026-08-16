@@ -266,6 +266,7 @@ export async function createTask(
     shortId: `L-${id}`,
     title,
     priority: 1,
+    archived: false,
     order: Date.now(),
     boardId,
     status: status
@@ -300,6 +301,7 @@ export async function listTasks(projectId: number): Promise<TaskListResponse> {
             description: t.description,
             priority: t.priority,
             endDate: t.endDate,
+            archived: t.archived ?? false,
             order: t.order,
             boardId: t.boardId ?? undefined,
             status: st
@@ -345,6 +347,7 @@ export async function updateTask(
           description: updated.description,
           priority: updated.priority,
           endDate: updated.endDate,
+          archived: updated.archived ?? false,
           order: updated.order,
           boardId: updated.boardId ?? undefined,
           status: st
@@ -414,6 +417,6 @@ export async function seedDefaultData(): Promise<void> {
   const projects = await listProjects();
   if (projects.length > 0) return;
 
-  const project = await createProject("My First Project", "Default local project");
+  const _project = await createProject("My First Project", "Default local project");
   // createProject already creates default statuses and a board
 }

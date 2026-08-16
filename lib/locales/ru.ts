@@ -61,6 +61,8 @@ export default {
     zoomOutColumns: "Уменьшить колонки",
     resetColumnOrder: "Сбросить порядок колонок",
     newTaskInCell: "Новая задача...",
+    archiveTask: "Архивировать",
+    unarchiveTask: "Разархивировать",
   },
   taskCard: {
     priority: {
@@ -69,6 +71,14 @@ export default {
       high: "Высокий",
       urgent: "Срочный",
     },
+    children: "Подзадачи",
+    archived: "Архив",
+    daysLeft: "{n}д ост",
+    hoursLeft: "{n}ч ост",
+    minutesLeft: "{n}м ост",
+    daysOverdue: "{n}д просроч",
+    hoursOverdue: "{n}ч просроч",
+    minutesOverdue: "{n}м просроч",
   },
   boardFilters: {
     searchPlaceholder: "Поиск задач...",
@@ -119,7 +129,6 @@ export default {
     projects: "Проекты",
     createProject: "Создать проект",
     projectName: "Название проекта",
-    projectDesc: "Описание (необязательно)",
     create: "Создать",
     noProjects: "Пока нет проектов",
     deleteConfirmTitle: "Удалить проект?",
@@ -129,6 +138,8 @@ export default {
     editProject: "Изменить проект",
     editCancelButton: "Отмена",
     editSaveButton: "Сохранить",
+    ownedProjects: "Владелец",
+    memberProjects: "Участник",
   },
   quickLinks: {
     add: "Добавить быструю ссылку",
@@ -141,6 +152,8 @@ export default {
     cancel: "Отмена",
     save: "Сохранить",
     addBtn: "Добавить",
+    confirmDelete: "Удалить эту ссылку?",
+    delete: "Удалить",
   },
   settings: {
     title: "Настройки",
@@ -150,6 +163,9 @@ export default {
     appearance: "Внешний вид",
     autoRefresh: "Автообновление",
     autoRefreshInterval: "Интервал (сек)",
+    uiScale: "Размер интерфейса",
+    animations: "Анимации",
+    animationsHint: "Анимация добавления, удаления и перемещения задач и досок",
     nextRefreshIn: "Обновление через",
   },
   languages: {

@@ -61,6 +61,8 @@ export default {
     zoomOutColumns: "Zoom out columns",
     resetColumnOrder: "Reset column order",
     newTaskInCell: "New task...",
+    archiveTask: "Archive",
+    unarchiveTask: "Unarchive",
   },
   taskCard: {
     priority: {
@@ -69,6 +71,14 @@ export default {
       high: "High",
       urgent: "Urgent",
     },
+    children: "Subtasks",
+    archived: "Archived",
+    daysLeft: "{n}d left",
+    hoursLeft: "{n}h left",
+    minutesLeft: "{n}m left",
+    daysOverdue: "{n}d overdue",
+    hoursOverdue: "{n}h overdue",
+    minutesOverdue: "{n}m overdue",
   },
   boardFilters: {
     searchPlaceholder: "Search tasks...",
@@ -119,7 +129,6 @@ export default {
     projects: "Projects",
     createProject: "Create project",
     projectName: "Project name",
-    projectDesc: "Description (optional)",
     create: "Create",
     noProjects: "No projects yet",
     deleteConfirmTitle: "Delete project?",
@@ -129,6 +138,8 @@ export default {
     editProject: "Edit project",
     editCancelButton: "Cancel",
     editSaveButton: "Save",
+    ownedProjects: "Owned",
+    memberProjects: "Member",
   },
   quickLinks: {
     add: "Add quick link",
@@ -141,6 +152,8 @@ export default {
     cancel: "Cancel",
     save: "Save",
     addBtn: "Add",
+    confirmDelete: "Delete this link?",
+    delete: "Delete",
   },
   settings: {
     title: "Settings",
@@ -150,6 +163,9 @@ export default {
     appearance: "Appearance",
     autoRefresh: "Auto-refresh",
     autoRefreshInterval: "Interval (sec)",
+    uiScale: "Interface scale",
+    animations: "Animations",
+    animationsHint: "Animate task and board add, remove, and move operations",
     nextRefreshIn: "Refresh in",
   },
   languages: {

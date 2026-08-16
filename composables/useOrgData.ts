@@ -128,13 +128,13 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     return remoteApi.reorderTasks(projectSlug, statusId, taskIds);
   }
 
-  async function createProject(name: string, description?: string): Promise<Project> {
-    if (isLocal.value) return localApi.createProject(name, description);
+  async function createProject(name: string): Promise<Project> {
+    if (isLocal.value) return localApi.createProject(name);
     throw new Error("Remote project creation not implemented");
   }
 
-  async function updateProject(id: number, name: string, description?: string): Promise<Project> {
-    if (isLocal.value) return localApi.updateProject(id, name, description);
+  async function updateProject(id: number, name: string): Promise<Project> {
+    if (isLocal.value) return localApi.updateProject(id, name);
     throw new Error("Remote project update not implemented");
   }
 

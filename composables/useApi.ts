@@ -172,6 +172,28 @@ export function useApi() {
     return resp.sprints ?? [];
   }
 
+  async function reorderTasks(
+    projectSlug: string,
+    statusId: number | null,
+    taskIds: number[],
+  ): Promise<void> {
+    await apiFetch(`/projects/${projectSlug}/tasks/reorder`, {
+      method: "PATCH",
+      body: JSON.stringify({ statusId, taskIds }),
+    });
+  }
+
+  async function dragTask(
+    projectSlug: string,
+    taskId: string,
+    action: "start" | "end",
+  ): Promise<void> {
+    await apiFetch(`/projects/${projectSlug}/tasks/${taskId}/drag`, {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    });
+  }
+
   return {
     apiFetch,
     getWorkspace,
@@ -183,5 +205,7 @@ export function useApi() {
     getProjectMembers,
     getProjectTags,
     getProjectSprints,
+    reorderTasks,
+    dragTask,
   };
 }

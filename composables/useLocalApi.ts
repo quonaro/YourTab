@@ -16,14 +16,14 @@ export function useLocalApi() {
     }
   }
 
-  async function createProject(name: string, description?: string): Promise<Project> {
-    const project = await db.createProject(name, description);
+  async function createProject(name: string): Promise<Project> {
+    const project = await db.createProject(name);
     projects.value = [...projects.value, project];
     return project;
   }
 
-  async function updateProject(id: number, name: string, description?: string): Promise<Project> {
-    const updated = await db.updateProject(id, name, description);
+  async function updateProject(id: number, name: string): Promise<Project> {
+    const updated = await db.updateProject(id, name);
     projects.value = projects.value.map((p) => (p.id === id ? updated : p));
     return updated;
   }

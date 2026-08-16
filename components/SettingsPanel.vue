@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { X, LogIn, LogOut, Loader2, Server } from "lucide-vue-next";
+import {
+  IconX,
+  IconLogin,
+  IconLogout,
+  IconLoader2,
+  IconServer,
+} from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
@@ -27,6 +33,7 @@ const accent = ref<string>("indigo");
 const language = ref<Language>("ru");
 const autoRefreshEnabled = ref(false);
 const autoRefreshInterval = ref(60);
+const uiScale = ref(75);
 const saved = ref(false);
 
 onMounted(() => {
@@ -36,6 +43,7 @@ onMounted(() => {
   language.value = settings.value.language;
   autoRefreshEnabled.value = settings.value.autoRefreshEnabled;
   autoRefreshInterval.value = settings.value.autoRefreshInterval;
+  uiScale.value = settings.value.uiScale;
 });
 
 function handleSave() {
@@ -47,6 +55,10 @@ function handleSave() {
   settings.value.autoRefreshInterval = Math.max(
     5,
     Math.round(autoRefreshInterval.value),
+  );
+  settings.value.uiScale = Math.max(
+    25,
+    Math.min(150, Math.round(uiScale.value)),
   );
   saveSettings();
   applyTheme(theme.value);
@@ -94,7 +106,7 @@ function close() {
         class="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"
         @click="close"
       >
-        <X :size="18" />
+        <IconX :size="18" />
       </button>
     </div>
 
@@ -103,7 +115,7 @@ function close() {
       <!-- Server connection -->
       <section class="space-y-3">
         <h3 class="form-label flex items-center gap-1.5">
-          <Server :size="14" />
+          <IconServer :size="14" />
           {{ t("settings.serverConnection") }}
         </h3>
 
@@ -124,7 +136,7 @@ function close() {
               class="btn-small text-destructive"
               @click="handleDisconnect"
             >
-              <LogOut :size="14" />
+              <IconLogout :size="14" />
               {{ t("settings.disconnect") }}
             </button>
           </div>
@@ -142,8 +154,8 @@ function close() {
             :disabled="authLoading"
             @click="handleConnect"
           >
-            <Loader2 v-if="authLoading" :size="16" class="animate-spin" />
-            <LogIn v-else :size="16" />
+            <IconLoader2 v-if="authLoading" :size="16" class="animate-spin" />
+            <IconLogin v-else :size="16" />
             {{
               authLoading ? t("login.connecting") : t("settings.connectServer")
             }}
@@ -231,6 +243,28 @@ function close() {
             <option value="ru">{{ t("languages.ru") }}</option>
             <option value="en">{{ t("languages.en") }}</option>
           </select>
+        </div>
+
+        <div>
+          <label class="form-hint">{{ t("settings.uiScale") }}</label>
+          <div class="mt-2 flex gap-2">
+            <button
+              v-for="val in [100, 125, 150, 175]"
+              :key="val"
+              class="rounded-lg border px-3 py-1.5 text-sm transition"
+              :class="
+                uiScale === val
+                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                  : 'border-foreground/10 text-muted-foreground hover:bg-muted'
+              "
+              @click="
+                uiScale = val;
+                handleSave();
+              "
+            >
+              {{ val }}%
+            </button>
+          </div>
         </div>
       </section>
 

@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, shallowRef, onMounted, onUnmounted, watch } from "vue";
 import {
-  Plus,
-  Lock,
-  Pencil,
-  Trash2,
-  X,
-  AlertTriangle,
-  Minus,
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
-  RotateCcw,
-  LayoutGrid,
-  Columns3,
-  Search,
-  SlidersHorizontal,
-} from "lucide-vue-next";
+  IconPlus,
+  IconLock,
+  IconPencil,
+  IconTrash,
+  IconX,
+  IconAlertTriangle,
+  IconMinus,
+  IconChevronDown,
+  IconChevronRight,
+  IconGripVertical,
+  IconRotateClockwise,
+  IconLayoutGrid,
+  IconColumns3,
+  IconSearch,
+  IconAdjustmentsHorizontal,
+  IconArchive,
+} from "@tabler/icons-vue";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
 import { useWebSocket, type WSMessage } from "@/composables/useWebSocket";
 import { useAuth } from "@/composables/useAuth";
@@ -91,6 +92,17 @@ const dragOverTaskId = ref<number | null>(null);
 const dragOverPosition = ref<"before" | "after">("before");
 const lockedTaskIds = shallowRef<Map<number, number>>(new Map());
 const newTaskInputs = ref<Record<string, string>>({});
+
+// ─── Animation transition names ───
+const taskAnimName = computed(() =>
+  settings.value.animationsEnabled ? "task" : "no-anim-task",
+);
+const statusAnimName = computed(() =>
+  settings.value.animationsEnabled ? "status" : "no-anim-status",
+);
+const boardAnimName = computed(() =>
+  settings.value.animationsEnabled ? "board" : "no-anim-board",
+);
 
 // ─── Search & Filters (remote only) ───
 const searchQuery = ref("");
@@ -446,18 +458,93 @@ function closeStatusMenuIfOutside(e: MouseEvent) {
   }
 }
 
+// ─── Client-side filtering (local) ───
+function getSortComparator(sort: string): (a: Task, b: Task) => number {
+  switch (sort) {
+    case "deadline-asc":
+      return (a, b) => {
+        if (!a.endDate && !b.endDate) return 0;
+        if (!a.endDate) return 1;
+        if (!b.endDate) return -1;
+        return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+      };
+    case "deadline-desc":
+      return (a, b) => {
+        if (!a.endDate && !b.endDate) return 0;
+        if (!a.endDate) return -1;
+        if (!b.endDate) return 1;
+        return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+      };
+    case "priority-desc":
+      return (a, b) => b.priority - a.priority;
+    case "priority-asc":
+      return (a, b) => a.priority - b.priority;
+    case "title-asc":
+      return (a, b) => a.title.localeCompare(b.title);
+    case "title-desc":
+      return (a, b) => b.title.localeCompare(a.title);
+    default:
+      return (a, b) => (a.order ?? 0) - (b.order ?? 0);
+  }
+}
+
+const displayTasks = computed<Task[]>(() => {
+  if (isRemote.value) return tasks.value;
+  const f = filters.value;
+  let result = tasks.value;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    result = result.filter((t) => {
+      if (t.title.toLowerCase().includes(q)) return true;
+      if (t.shortId?.toLowerCase().includes(q)) return true;
+      if (t.description?.toLowerCase().includes(q)) return true;
+      if (t.status?.name.toLowerCase().includes(q)) return true;
+      const people = [...(t.assignees ?? []), ...(t.responsibles ?? [])];
+      if (
+        people.some((p) =>
+          [p.firstName, p.lastName, p.username]
+            .filter((s): s is string => !!s)
+            .some((s) => s.toLowerCase().includes(q)),
+        )
+      )
+        return true;
+      if (t.tags?.some((tag) => tag.name.toLowerCase().includes(q)))
+        return true;
+      return false;
+    });
+  }
+  if (f.priority != null) {
+    result = result.filter((t) => t.priority === f.priority);
+  }
+  if (!f.includeArchived) {
+    result = result.filter((t) => !t.archived);
+  }
+  if (f.hasChildren) {
+    result = result.filter(
+      (t) => (t.childrenCount ?? 0) > 0 || (t.children?.length ?? 0) > 0,
+    );
+  }
+  return result;
+});
+
 // ─── Derived data ───
 const tasksByStatus = computed(() => {
   const map = new Map<number, Task[]>();
   for (const status of statuses.value) map.set(status.id, []);
-  for (const task of tasks.value) {
+  for (const task of displayTasks.value) {
     const sid = task.status?.id;
     if (sid == null) continue;
     const arr = map.get(sid);
     if (arr) arr.push(task);
   }
-  for (const arr of map.values())
-    arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const sort = filters.value.sort;
+  for (const arr of map.values()) {
+    if (!isRemote.value && sort && sort !== "default") {
+      arr.sort(getSortComparator(sort));
+    } else {
+      arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+  }
   return map;
 });
 
@@ -473,17 +560,19 @@ function pileTasksForCell(statusId: number): Task[] {
   );
 }
 
-const pileTasks = computed(() => tasks.value.filter((t) => t.boardId == null));
+const pileTasks = computed(() =>
+  displayTasks.value.filter((t) => t.boardId == null),
+);
 
 function boardTaskCount(boardId: number): number {
-  return tasks.value.filter((t) => t.boardId === boardId).length;
+  return displayTasks.value.filter((t) => t.boardId === boardId).length;
 }
 
 const rows = computed(() =>
   boards.value.map((b) => ({
     id: b.id,
     name: b.name,
-    tasks: tasks.value.filter((t) => t.boardId === b.id),
+    tasks: displayTasks.value.filter((t) => t.boardId === b.id),
   })),
 );
 
@@ -554,11 +643,10 @@ watch(
 
 // Debounced search → backend
 watch(searchQuery, (val) => {
-  if (!isRemote.value) return;
   if (searchDebounce) clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => {
     filters.value = { ...filters.value, search: val };
-    loadData();
+    if (isRemote.value) loadData();
   }, 400);
 });
 
@@ -962,13 +1050,47 @@ async function handleCreateTask(boardId: number | null, statusId: number) {
     return;
   }
   try {
-    await createTask(props.projectSlug, {
+    const created = await createTask(props.projectSlug, {
       title,
       statusId,
       boardId: boardId ?? undefined,
     });
     newTaskInputs.value[key] = "";
-    if (!isRemote.value) await loadData();
+    if (!tasks.value.some((tk) => tk.id === created.id)) {
+      tasks.value = [...tasks.value, created];
+    }
+  } catch (e) {
+    error.value = mapApiError(e, t);
+  }
+}
+
+async function archiveTask(taskId: number) {
+  if (props.readOnly) {
+    error.value = t("board.readOnlyError");
+    return;
+  }
+  try {
+    await updateTask(props.projectSlug, String(taskId), { archived: true });
+    const idx = tasks.value.findIndex((tk) => tk.id === taskId);
+    if (idx !== -1) {
+      tasks.value[idx] = { ...tasks.value[idx], archived: true };
+    }
+  } catch (e) {
+    error.value = mapApiError(e, t);
+  }
+}
+
+async function unarchiveTask(taskId: number) {
+  if (props.readOnly) {
+    error.value = t("board.readOnlyError");
+    return;
+  }
+  try {
+    await updateTask(props.projectSlug, String(taskId), { archived: false });
+    const idx = tasks.value.findIndex((tk) => tk.id === taskId);
+    if (idx !== -1) {
+      tasks.value[idx] = { ...tasks.value[idx], archived: false };
+    }
   } catch (e) {
     error.value = mapApiError(e, t);
   }
@@ -1014,7 +1136,7 @@ async function handleDeleteBoard(boardId: number) {
       v-if="readOnly"
       class="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-yellow-500/10 px-3 py-2 text-sm text-yellow-700 dark:text-yellow-400"
     >
-      <Lock :size="14" class="shrink-0" />
+      <IconLock :size="14" class="shrink-0" />
       {{ t("board.readOnlyBanner") }}
     </div>
 
@@ -1040,14 +1162,14 @@ async function handleDeleteBoard(boardId: number) {
     <div
       v-else-if="statuses.length > 0"
       ref="boardContainerRef"
-      class="agile-board flex flex-1 flex-col gap-2 overflow-hidden p-4"
+      class="agile-board flex flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto p-4"
     >
       <!-- Toolbar -->
-      <div class="flex flex-wrap items-end gap-4">
-        <!-- Search & Filters (remote only) -->
-        <div v-if="isRemote" class="flex items-center gap-2">
+      <div class="flex flex-wrap items-end gap-2">
+        <!-- Search & Filters -->
+        <div class="flex items-center gap-2">
           <div class="relative flex items-center">
-            <Search
+            <IconSearch
               :size="15"
               class="pointer-events-none absolute left-2.5 text-muted-foreground"
             />
@@ -1062,7 +1184,7 @@ async function handleDeleteBoard(boardId: number) {
               class="absolute right-2 text-muted-foreground transition hover:text-foreground"
               @click="searchQuery = ''"
             >
-              <X :size="14" />
+              <IconX :size="14" />
             </button>
           </div>
 
@@ -1072,7 +1194,7 @@ async function handleDeleteBoard(boardId: number) {
             class="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 text-sm font-medium text-destructive transition hover:bg-destructive/20"
             @click="clearAllFilters"
           >
-            <X :size="15" />
+            <IconX :size="15" />
             {{ t("boardFilters.clear") }}
           </button>
 
@@ -1081,7 +1203,7 @@ async function handleDeleteBoard(boardId: number) {
             class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             @click="openFilterSidebar"
           >
-            <SlidersHorizontal :size="15" />
+            <IconAdjustmentsHorizontal :size="15" />
             {{ t("boardFilters.button") }}
             <span
               v-if="activeFilterCount > 0"
@@ -1105,7 +1227,7 @@ async function handleDeleteBoard(boardId: number) {
               :title="t('board.zoomOutColumns')"
               @click="zoomOutColumns"
             >
-              <Minus :size="16" />
+              <IconMinus :size="16" />
             </button>
             <span
               class="min-w-[3ch] text-center text-xs font-medium text-muted-foreground"
@@ -1120,7 +1242,7 @@ async function handleDeleteBoard(boardId: number) {
               :title="t('board.zoomInColumns')"
               @click="zoomInColumns"
             >
-              <Plus :size="16" />
+              <IconPlus :size="16" />
             </button>
           </div>
           <button
@@ -1131,7 +1253,7 @@ async function handleDeleteBoard(boardId: number) {
             :title="t('board.resetColumnOrder')"
             @click="resetColumnOrder"
           >
-            <RotateCcw :size="16" />
+            <IconRotateClockwise :size="16" />
           </button>
         </div>
 
@@ -1144,7 +1266,7 @@ async function handleDeleteBoard(boardId: number) {
             class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             @click="showCreateStatus = true"
           >
-            <Columns3 :size="15" />
+            <IconColumns3 :size="15" />
             {{ t("board.createColumn") }}
           </button>
           <button
@@ -1152,7 +1274,7 @@ async function handleDeleteBoard(boardId: number) {
             class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
             @click="showCreateBoard = true"
           >
-            <LayoutGrid :size="15" />
+            <IconLayoutGrid :size="15" />
             {{ t("board.createBoard") }}
           </button>
         </div>
@@ -1164,7 +1286,9 @@ async function handleDeleteBoard(boardId: number) {
         class="agile-scroll sticky top-0 z-10 overflow-x-auto bg-background"
         @scroll="syncScrollFrom($event.target as HTMLElement)"
       >
-        <div
+        <TransitionGroup
+          :name="statusAnimName"
+          tag="div"
           class="flex"
           :style="{ minWidth: `${orderedStatuses.length * COLUMN_WIDTH}px` }"
         >
@@ -1188,7 +1312,7 @@ async function handleDeleteBoard(boardId: number) {
             @dragover="onStatusDragOver(status.id, $event)"
             @drop="onStatusDrop"
           >
-            <GripVertical
+            <IconGripVertical
               :size="14"
               class="shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing"
             />
@@ -1203,7 +1327,7 @@ async function handleDeleteBoard(boardId: number) {
               {{ tasksByStatus.get(status.id)?.length ?? 0 }}
             </span>
             <button
-              v-if="!readOnly"
+              v-if="!readOnly && !isRemote"
               :data-status-trigger="status.id"
               class="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
               @click="
@@ -1211,7 +1335,7 @@ async function handleDeleteBoard(boardId: number) {
                   statusActionsOpen === status.id ? null : status.id
               "
             >
-              <Pencil :size="13" />
+              <IconPencil :size="13" />
             </button>
             <!-- Status actions dropdown -->
             <div
@@ -1223,19 +1347,19 @@ async function handleDeleteBoard(boardId: number) {
                 class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
                 @click="startEditStatus(status)"
               >
-                <Pencil :size="13" />
+                <IconPencil :size="13" />
                 {{ t("board.editStatus") }}
               </button>
               <button
                 class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
                 @click="startDeleteStatus(status)"
               >
-                <Trash2 :size="13" />
+                <IconTrash :size="13" />
                 {{ t("board.deleteStatus") }}
               </button>
             </div>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
 
       <!-- Pile section (tasks without a board) -->
@@ -1251,7 +1375,7 @@ async function handleDeleteBoard(boardId: number) {
             @click="pileCollapsed = !pileCollapsed"
           >
             <component
-              :is="pileCollapsed ? ChevronRight : ChevronDown"
+              :is="pileCollapsed ? IconChevronRight : IconChevronDown"
               :size="16"
               class="shrink-0 text-muted-foreground"
             />
@@ -1298,12 +1422,16 @@ async function handleDeleteBoard(boardId: number) {
                   @blur="newTaskInputs[`pile-${status.id}`] = ''"
                 />
               </div>
-              <div class="relative flex flex-col gap-2">
+              <TransitionGroup
+                :name="taskAnimName"
+                tag="div"
+                class="relative flex flex-col gap-2"
+              >
                 <div
                   v-for="task in pileTasksForCell(status.id)"
                   :key="task.id"
                   :data-id="task.id"
-                  class="cursor-grab active:cursor-grabbing"
+                  class="group/task relative cursor-grab active:cursor-grabbing"
                   :class="{
                     'pointer-events-none opacity-50': lockedTaskIds.has(
                       task.id,
@@ -1313,7 +1441,6 @@ async function handleDeleteBoard(boardId: number) {
                   :draggable="!readOnly && !isLocked(task.id)"
                   @dragstart="onDragStart(task.id)"
                   @dragend="onDragEnd"
-                  @dragover="onTaskDragOver(task.id, $event)"
                 >
                   <div
                     v-if="
@@ -1331,8 +1458,25 @@ async function handleDeleteBoard(boardId: number) {
                     :project-slug="projectSlug"
                     @dragstart="onDragStart(task.id)"
                     @dragend="onDragEnd"
-                    @dragover="onTaskDragOver(task.id, $event)"
                   />
+                  <button
+                    v-if="!readOnly && !isRemote"
+                    draggable="false"
+                    class="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-card/80 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition hover:bg-muted hover:text-foreground group-hover/task:opacity-100"
+                    :title="
+                      task.archived
+                        ? t('board.unarchiveTask')
+                        : t('board.archiveTask')
+                    "
+                    @click.stop="
+                      task.archived
+                        ? unarchiveTask(task.id)
+                        : archiveTask(task.id)
+                    "
+                  >
+                    <IconArchive v-if="!task.archived" :size="13" />
+                    <IconRotateClockwise v-else :size="13" />
+                  </button>
                   <div
                     v-if="
                       dragOverTaskId === task.id &&
@@ -1342,12 +1486,12 @@ async function handleDeleteBoard(boardId: number) {
                     class="agile-insertion-line"
                   />
                 </div>
-                <div
-                  v-if="pileTasksForCell(status.id).length === 0"
-                  class="flex min-h-[120px] items-center justify-center text-xs text-muted-foreground/50"
-                >
-                  —
-                </div>
+              </TransitionGroup>
+              <div
+                v-if="pileTasksForCell(status.id).length === 0"
+                class="flex min-h-[120px] items-center justify-center text-xs text-muted-foreground/50"
+              >
+                —
               </div>
             </div>
           </div>
@@ -1355,7 +1499,11 @@ async function handleDeleteBoard(boardId: number) {
       </div>
 
       <!-- Board rows -->
-      <TransitionGroup tag="div" name="board" class="flex flex-col gap-2">
+      <TransitionGroup
+        tag="div"
+        :name="boardAnimName"
+        class="flex flex-col gap-2"
+      >
         <div
           v-for="row in rows"
           :key="row.id"
@@ -1379,13 +1527,13 @@ async function handleDeleteBoard(boardId: number) {
               @dragend="onBoardDragEnd"
               @click="toggleBoard(row.id)"
             >
-              <GripVertical
+              <IconGripVertical
                 v-if="!readOnly"
                 :size="16"
-                class="shrink-0 cursor-grab text-muted-foreground/40 active:cursor-grabbing"
+                class="shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing"
               />
               <component
-                :is="collapsed.has(row.id) ? ChevronRight : ChevronDown"
+                :is="collapsed.has(row.id) ? IconChevronRight : IconChevronDown"
                 :size="16"
                 class="shrink-0 text-muted-foreground"
               />
@@ -1401,7 +1549,7 @@ async function handleDeleteBoard(boardId: number) {
                 :title="t('board.deleteBoard')"
                 @click.stop="handleDeleteBoard(row.id)"
               >
-                <Trash2 :size="13" />
+                <IconTrash :size="13" />
               </button>
             </button>
           </div>
@@ -1441,12 +1589,16 @@ async function handleDeleteBoard(boardId: number) {
                     @blur="newTaskInputs[`${row.id}-${status.id}`] = ''"
                   />
                 </div>
-                <div class="relative flex flex-col gap-2">
+                <TransitionGroup
+                  :name="taskAnimName"
+                  tag="div"
+                  class="relative flex flex-col gap-2"
+                >
                   <div
                     v-for="task in tasksForCell(row.id, status.id)"
                     :key="task.id"
                     :data-id="task.id"
-                    class="cursor-grab active:cursor-grabbing"
+                    class="group/task relative cursor-grab active:cursor-grabbing"
                     :class="{
                       'pointer-events-none opacity-50': lockedTaskIds.has(
                         task.id,
@@ -1474,8 +1626,25 @@ async function handleDeleteBoard(boardId: number) {
                       :project-slug="projectSlug"
                       @dragstart="onDragStart(task.id)"
                       @dragend="onDragEnd"
-                      @dragover="onTaskDragOver(task.id, $event)"
                     />
+                    <button
+                      v-if="!readOnly && !isRemote"
+                      draggable="false"
+                      class="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-card/80 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition hover:bg-muted hover:text-foreground group-hover/task:opacity-100"
+                      :title="
+                        task.archived
+                          ? t('board.unarchiveTask')
+                          : t('board.archiveTask')
+                      "
+                      @click.stop="
+                        task.archived
+                          ? unarchiveTask(task.id)
+                          : archiveTask(task.id)
+                      "
+                    >
+                      <IconArchive v-if="!task.archived" :size="13" />
+                      <IconRotateClockwise v-else :size="13" />
+                    </button>
                     <div
                       v-if="
                         dragOverTaskId === task.id &&
@@ -1485,12 +1654,12 @@ async function handleDeleteBoard(boardId: number) {
                       class="agile-insertion-line"
                     />
                   </div>
-                  <div
-                    v-if="tasksForCell(row.id, status.id).length === 0"
-                    class="flex min-h-[120px] items-center justify-center text-xs text-muted-foreground/50"
-                  >
-                    —
-                  </div>
+                </TransitionGroup>
+                <div
+                  v-if="tasksForCell(row.id, status.id).length === 0"
+                  class="flex min-h-[120px] items-center justify-center text-xs text-muted-foreground/50"
+                >
+                  —
                 </div>
               </div>
             </div>
@@ -1660,7 +1829,7 @@ async function handleDeleteBoard(boardId: number) {
   >
     <template #header>
       <div class="flex items-center gap-2">
-        <AlertTriangle :size="18" class="text-destructive" />
+        <IconAlertTriangle :size="18" class="text-destructive" />
         <h2 class="text-sm font-semibold">{{ t("board.deleteStatus") }}</h2>
       </div>
     </template>
@@ -1704,15 +1873,15 @@ async function handleDeleteBoard(boardId: number) {
               class="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
               @click="filterSidebarOpen = false"
             >
-              <X :size="18" />
+              <IconX :size="18" />
             </button>
           </div>
 
           <!-- Body -->
           <div class="flex-1 overflow-y-auto px-5 py-4">
             <div class="flex flex-col gap-4">
-              <!-- Assignee -->
-              <div class="flex w-full flex-col gap-1.5">
+              <!-- Assignee (remote only) -->
+              <div v-if="isRemote" class="flex w-full flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground/70">{{
                   t("boardFilters.assigneeLabel")
                 }}</label>
@@ -1724,8 +1893,8 @@ async function handleDeleteBoard(boardId: number) {
                 />
               </div>
 
-              <!-- Responsible -->
-              <div class="flex w-full flex-col gap-1.5">
+              <!-- Responsible (remote only) -->
+              <div v-if="isRemote" class="flex w-full flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground/70">{{
                   t("boardFilters.responsibleLabel")
                 }}</label>
@@ -1737,8 +1906,8 @@ async function handleDeleteBoard(boardId: number) {
                 />
               </div>
 
-              <!-- Creator -->
-              <div class="flex w-full flex-col gap-1.5">
+              <!-- Creator (remote only) -->
+              <div v-if="isRemote" class="flex w-full flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground/70">{{
                   t("boardFilters.creatorLabel")
                 }}</label>
@@ -1750,8 +1919,8 @@ async function handleDeleteBoard(boardId: number) {
                 />
               </div>
 
-              <!-- Tags -->
-              <div class="flex w-full flex-col gap-1.5">
+              <!-- Tags (remote only) -->
+              <div v-if="isRemote" class="flex w-full flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground/70">{{
                   t("boardFilters.tagLabel")
                 }}</label>
@@ -1763,8 +1932,8 @@ async function handleDeleteBoard(boardId: number) {
                 />
               </div>
 
-              <!-- Sprints -->
-              <div class="flex w-full flex-col gap-1.5">
+              <!-- Sprints (remote only) -->
+              <div v-if="isRemote" class="flex w-full flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground/70">{{
                   t("boardFilters.sprintLabel")
                 }}</label>
@@ -1883,7 +2052,7 @@ async function handleDeleteBoard(boardId: number) {
               class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-destructive bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90"
               @click="clearAllFilters"
             >
-              <X :size="16" />
+              <IconX :size="16" />
               {{ t("boardFilters.clear") }}
             </button>
           </div>
@@ -1918,6 +2087,30 @@ async function handleDeleteBoard(boardId: number) {
   transition: opacity 0.15s ease;
 }
 .board-move {
+  transition: transform 0.3s ease;
+}
+.task-move {
+  transition: transform 0.3s ease;
+}
+.task-enter-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.task-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.task-enter-from {
+  opacity: 0;
+  transform: scale(0.92) translateY(-8px);
+}
+.task-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
+}
+.status-move {
   transition: transform 0.3s ease;
 }
 .filter-sidebar-enter-active,

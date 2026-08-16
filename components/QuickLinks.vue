@@ -1,31 +1,68 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import {
-  Plus,
-  X,
-  Link as LinkIcon,
-  Globe,
-  Github,
-  Mail,
-  Calendar,
-  MessageSquare,
-  Code,
-  Book,
-  Briefcase,
-  Trello,
-  Figma,
-  Chrome,
-  Gitlab,
-  Slack,
-  Phone,
-  MapPin,
-  FileText,
-  Music,
-  Camera,
-  Video,
-  ShoppingBag,
-  type LucideIcon,
-} from "lucide-vue-next";
+  IconPlus,
+  IconX,
+  IconLink,
+  IconWorld,
+  IconBrandGithub,
+  IconMail,
+  IconCalendar,
+  IconMessage2,
+  IconCode,
+  IconBook,
+  IconBriefcase,
+  IconBrandTrello,
+  IconBrandFigma,
+  IconBrandChrome,
+  IconBrandGitlab,
+  IconBrandSlack,
+  IconPhone,
+  IconMapPin,
+  IconFileText,
+  IconMusic,
+  IconCamera,
+  IconVideo,
+  IconShoppingBag,
+  IconBrandTwitter,
+  IconBrandYoutube,
+  IconBrandLinkedin,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandTelegram,
+  IconBrandDiscord,
+  IconBrandTwitch,
+  IconBrandDribbble,
+  IconBrandNotion,
+  IconExternalLink,
+  IconStar,
+  IconHeart,
+  IconBookmark,
+  IconFolder,
+  IconDatabase,
+  IconServer,
+  IconCloud,
+  IconTerminal,
+  IconGitBranch,
+  IconBug,
+  IconBulb,
+  IconBolt,
+  IconRocket,
+  IconSettings,
+  IconUser,
+  IconUsers,
+  IconHome,
+  IconSearch,
+  IconBell,
+  IconClock,
+  IconDownload,
+  IconUpload,
+  IconLock,
+  IconKey,
+  IconWallet,
+  IconCreditCard,
+  type Icon,
+} from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useI18n } from "@/composables/useI18n";
 import type { QuickLink } from "@/lib/settings";
@@ -42,36 +79,73 @@ const formData = ref({
   icon: "Globe",
 });
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  Globe,
-  Github,
-  Mail,
-  Calendar,
-  MessageSquare,
-  Code,
-  Book,
-  Briefcase,
-  Trello,
-  Figma,
-  Chrome,
-  Gitlab,
-  Slack,
-  Phone,
-  MapPin,
-  FileText,
-  Music,
-  Camera,
-  Video,
-  ShoppingBag,
-  Link: LinkIcon,
+const ICON_MAP: Record<string, Icon> = {
+  Globe: IconWorld,
+  Github: IconBrandGithub,
+  Mail: IconMail,
+  Calendar: IconCalendar,
+  MessageSquare: IconMessage2,
+  Code: IconCode,
+  Book: IconBook,
+  Briefcase: IconBriefcase,
+  Trello: IconBrandTrello,
+  Figma: IconBrandFigma,
+  Chrome: IconBrandChrome,
+  Gitlab: IconBrandGitlab,
+  Slack: IconBrandSlack,
+  Phone: IconPhone,
+  MapPin: IconMapPin,
+  FileText: IconFileText,
+  Music: IconMusic,
+  Camera: IconCamera,
+  Video: IconVideo,
+  ShoppingBag: IconShoppingBag,
+  Twitter: IconBrandTwitter,
+  Youtube: IconBrandYoutube,
+  Linkedin: IconBrandLinkedin,
+  Facebook: IconBrandFacebook,
+  Instagram: IconBrandInstagram,
+  Telegram: IconBrandTelegram,
+  Discord: IconBrandDiscord,
+  Twitch: IconBrandTwitch,
+  Dribbble: IconBrandDribbble,
+  Notion: IconBrandNotion,
+  ExternalLink: IconExternalLink,
+  Star: IconStar,
+  Heart: IconHeart,
+  Bookmark: IconBookmark,
+  Folder: IconFolder,
+  Database: IconDatabase,
+  Server: IconServer,
+  Cloud: IconCloud,
+  Terminal: IconTerminal,
+  GitBranch: IconGitBranch,
+  Bug: IconBug,
+  Lightbulb: IconBulb,
+  Zap: IconBolt,
+  Rocket: IconRocket,
+  Settings: IconSettings,
+  User: IconUser,
+  Users: IconUsers,
+  Home: IconHome,
+  Search: IconSearch,
+  Bell: IconBell,
+  Clock: IconClock,
+  Download: IconDownload,
+  Upload: IconUpload,
+  Lock: IconLock,
+  Key: IconKey,
+  Wallet: IconWallet,
+  CreditCard: IconCreditCard,
+  Link: IconLink,
 };
 
 const ICON_NAMES = Object.keys(ICON_MAP);
 
 const quickLinks = computed(() => settings.value.quickLinks ?? []);
 
-function getIcon(name: string): LucideIcon {
-  return ICON_MAP[name] ?? Globe;
+function getIcon(name: string): Icon {
+  return ICON_MAP[name] ?? IconWorld;
 }
 
 function openLink(url: string) {
@@ -91,16 +165,17 @@ function startEdit(link: QuickLink) {
 }
 
 function saveLink() {
-  if (!formData.value.name.trim() || !formData.value.url.trim()) return;
+  if (!formData.value.url.trim()) return;
 
   const links = [...quickLinks.value];
+  const name = formData.value.name.trim() || formData.value.url.trim();
 
   if (editingId.value) {
     const idx = links.findIndex((l) => l.id === editingId.value);
     if (idx >= 0) {
       links[idx] = {
         id: editingId.value,
-        name: formData.value.name.trim(),
+        name,
         url: formData.value.url.trim(),
         icon: formData.value.icon,
       };
@@ -108,7 +183,7 @@ function saveLink() {
   } else {
     links.push({
       id: crypto.randomUUID(),
-      name: formData.value.name.trim(),
+      name,
       url: formData.value.url.trim(),
       icon: formData.value.icon,
     });
@@ -137,28 +212,29 @@ function cancelForm() {
     <button
       v-for="link in quickLinks"
       :key="link.id"
-      class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-foreground/70 transition hover:bg-muted hover:text-foreground"
-      :title="link.url"
+      class="group relative flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground/70 transition hover:bg-primary/10 hover:text-primary"
+      :title="link.name"
       @click="openLink(link.url)"
       @contextmenu.prevent="startEdit(link)"
     >
       <component :is="getIcon(link.icon)" :size="15" class="shrink-0" />
-      <span class="max-w-[120px] truncate">{{ link.name }}</span>
       <span
-        class="ml-0.5 rounded p-0.5 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-foreground/10 hover:text-destructive"
+        class="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white opacity-0 transition group-hover:opacity-100"
         @click.stop="deleteLink(link.id)"
       >
-        <X :size="12" />
+        <IconX :size="10" />
       </span>
     </button>
 
     <!-- Add button -->
     <button
-      class="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      class="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-foreground/20 text-muted-foreground transition hover:border-primary hover:bg-primary/10 hover:text-primary"
+      :class="{ 'w-auto gap-1 px-3': quickLinks.length === 0 }"
       :title="t('quickLinks.add')"
       @click="showAddForm = !showAddForm"
     >
-      <Plus :size="15" />
+      <IconPlus :size="15" />
+      <span v-if="quickLinks.length === 0">{{ t("quickLinks.add") }}</span>
     </button>
 
     <!-- Add/Edit form dropdown -->
@@ -175,7 +251,7 @@ function cancelForm() {
             class="rounded p-1 text-muted-foreground transition hover:bg-muted"
             @click="cancelForm"
           >
-            <X :size="14" />
+            <IconX :size="14" />
           </button>
         </div>
 
@@ -229,7 +305,7 @@ function cancelForm() {
           </button>
           <button
             class="btn-primary btn-small"
-            :disabled="!formData.name.trim() || !formData.url.trim()"
+            :disabled="!formData.url.trim()"
             @click="saveLink"
           >
             {{ editingId ? t("quickLinks.save") : t("quickLinks.addBtn") }}

@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import {
-  Plus,
-  FolderKanban,
-  Trash2,
-  Pencil,
-  X,
-  AlertTriangle,
-  RefreshCw,
-} from "lucide-vue-next";
+  IconPlus,
+  IconLayoutKanban,
+  IconTrash,
+  IconPencil,
+  IconAlertTriangle,
+  IconRefresh,
+  IconChevronDown,
+  IconChevronRight,
+} from "@tabler/icons-vue";
 import { useI18n } from "@/composables/useI18n";
 import { useSettings } from "@/composables/useSettings";
 import { useRefreshCountdown } from "@/composables/useRefreshCountdown";
@@ -29,49 +30,53 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [slug: string];
-  create: [name: string, description?: string];
-  edit: [id: number, name: string, description?: string];
+  create: [name: string];
+  edit: [id: number, name: string];
   delete: [id: number];
 }>();
 
+const ownedProjects = computed(() =>
+  props.projects.filter((p) => p.role === "owner" || !p.role),
+);
+const memberProjects = computed(() =>
+  props.projects.filter((p) => p.role && p.role !== "owner"),
+);
+const showOwned = ref(true);
+const showMember = ref(true);
+
 const showCreateForm = ref(false);
 const newProjectName = ref("");
-const newProjectDesc = ref("");
 
 function handleCreate() {
   const name = newProjectName.value.trim();
   if (!name) return;
-  emit("create", name, newProjectDesc.value.trim() || undefined);
+  emit("create", name);
   newProjectName.value = "";
-  newProjectDesc.value = "";
   showCreateForm.value = false;
+}
+
+function cancelCreate() {
+  showCreateForm.value = false;
+  newProjectName.value = "";
 }
 
 const editTarget = ref<Project | null>(null);
 const editName = ref("");
-const editDesc = ref("");
 
 function startEdit(e: Event, project: Project) {
   e.stopPropagation();
   editTarget.value = project;
   editName.value = project.name;
-  editDesc.value = project.description ?? "";
 }
 
 function cancelEdit() {
   editTarget.value = null;
   editName.value = "";
-  editDesc.value = "";
 }
 
 function handleEditSave() {
   if (!editTarget.value || !editName.value.trim()) return;
-  emit(
-    "edit",
-    editTarget.value.id,
-    editName.value.trim(),
-    editDesc.value.trim() || undefined,
-  );
+  emit("edit", editTarget.value.id, editName.value.trim());
   cancelEdit();
 }
 
@@ -106,31 +111,8 @@ function confirmDelete() {
         :title="t('sidebar.createProject')"
         @click="showCreateForm = !showCreateForm"
       >
-        <Plus :size="16" />
+        <IconPlus :size="16" />
       </button>
-    </div>
-
-    <!-- Create project form -->
-    <div v-if="showCreateForm" class="space-y-2 px-3 pb-2">
-      <input
-        v-model="newProjectName"
-        class="input-base h-8 text-sm"
-        :placeholder="t('sidebar.projectName')"
-        @keyup.enter="handleCreate"
-      />
-      <input
-        v-model="newProjectDesc"
-        class="input-base h-8 text-sm"
-        :placeholder="t('sidebar.projectDesc')"
-      />
-      <div class="flex gap-2">
-        <button class="btn-small flex-1" @click="handleCreate">
-          {{ t("sidebar.create") }}
-        </button>
-        <button class="btn-small" @click="showCreateForm = false">
-          <X :size="14" />
-        </button>
-      </div>
     </div>
 
     <!-- Project list -->
@@ -138,38 +120,101 @@ function confirmDelete() {
       <div v-if="loading" class="px-2 py-3 text-xs text-muted-foreground">
         {{ t("breadcrumbs.loading") }}
       </div>
-      <button
-        v-for="p in projects"
-        :key="p.id"
-        class="group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition"
-        :class="
-          selectedProject === p.slug
-            ? 'bg-primary/10 font-medium text-primary'
-            : 'text-foreground/70 hover:bg-muted'
-        "
-        @click="emit('select', p.slug)"
-      >
-        <FolderKanban :size="15" class="shrink-0" />
-        <span class="flex-1 truncate text-left">{{ p.name }}</span>
-        <Pencil
-          v-if="canCreate"
-          :size="13"
-          class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-          @click="(e) => startEdit(e, p)"
-        />
-        <Trash2
-          v-if="canCreate"
-          :size="13"
-          class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-          @click="(e) => handleDelete(e, p)"
-        />
-      </button>
-      <div
-        v-if="!loading && projects.length === 0"
-        class="px-2 py-3 text-xs text-muted-foreground"
-      >
-        {{ t("sidebar.noProjects") }}
-      </div>
+
+      <template v-if="!loading">
+        <!-- Owned projects subgroup -->
+        <div v-if="ownedProjects.length > 0">
+          <button
+            class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+            @click="showOwned = !showOwned"
+          >
+            <IconChevronDown v-if="showOwned" :size="13" class="shrink-0" />
+            <IconChevronRight v-else :size="13" class="shrink-0" />
+            {{ t("sidebar.ownedProjects") }}
+            <span class="ml-auto text-[10px] font-normal opacity-60">{{
+              ownedProjects.length
+            }}</span>
+          </button>
+          <template v-if="showOwned">
+            <button
+              v-for="p in ownedProjects"
+              :key="p.id"
+              class="group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition"
+              :class="
+                selectedProject === p.slug
+                  ? 'bg-primary/10 font-medium text-primary'
+                  : 'text-foreground/70 hover:bg-muted'
+              "
+              @click="emit('select', p.slug)"
+            >
+              <IconLayoutKanban :size="15" class="shrink-0" />
+              <span class="flex-1 truncate text-left">{{ p.name }}</span>
+              <IconPencil
+                v-if="canCreate"
+                :size="13"
+                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+                @click="(e) => startEdit(e, p)"
+              />
+              <IconTrash
+                v-if="canCreate"
+                :size="13"
+                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                @click="(e) => handleDelete(e, p)"
+              />
+            </button>
+          </template>
+        </div>
+
+        <!-- Member projects subgroup -->
+        <div v-if="memberProjects.length > 0">
+          <button
+            class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+            @click="showMember = !showMember"
+          >
+            <IconChevronDown v-if="showMember" :size="13" class="shrink-0" />
+            <IconChevronRight v-else :size="13" class="shrink-0" />
+            {{ t("sidebar.memberProjects") }}
+            <span class="ml-auto text-[10px] font-normal opacity-60">{{
+              memberProjects.length
+            }}</span>
+          </button>
+          <template v-if="showMember">
+            <button
+              v-for="p in memberProjects"
+              :key="p.id"
+              class="group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition"
+              :class="
+                selectedProject === p.slug
+                  ? 'bg-primary/10 font-medium text-primary'
+                  : 'text-foreground/70 hover:bg-muted'
+              "
+              @click="emit('select', p.slug)"
+            >
+              <IconLayoutKanban :size="15" class="shrink-0" />
+              <span class="flex-1 truncate text-left">{{ p.name }}</span>
+              <IconPencil
+                v-if="canCreate"
+                :size="13"
+                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+                @click="(e) => startEdit(e, p)"
+              />
+              <IconTrash
+                v-if="canCreate"
+                :size="13"
+                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                @click="(e) => handleDelete(e, p)"
+              />
+            </button>
+          </template>
+        </div>
+
+        <div
+          v-if="projects.length === 0"
+          class="px-2 py-3 text-xs text-muted-foreground"
+        >
+          {{ t("sidebar.noProjects") }}
+        </div>
+      </template>
     </div>
 
     <!-- Auto-refresh countdown -->
@@ -177,9 +222,54 @@ function confirmDelete() {
       v-if="isRemote && settings.autoRefreshEnabled && nextRefreshIn > 0"
       class="flex items-center gap-1.5 border-t border-foreground/10 px-3 py-2 text-xs text-muted-foreground"
     >
-      <RefreshCw :size="12" class="shrink-0" />
+      <IconRefresh :size="12" class="shrink-0" />
       <span>{{ t("settings.nextRefreshIn") }} {{ nextRefreshIn }}s</span>
     </div>
+
+    <!-- Create project modal -->
+    <Form
+      as="modal"
+      :open="showCreateForm"
+      @update:open="
+        (v) => {
+          if (!v) cancelCreate();
+        }
+      "
+      @submit="handleCreate"
+    >
+      <template #header>
+        <div class="flex items-center gap-2">
+          <IconPlus :size="18" class="text-primary" />
+          <h2 class="text-sm font-semibold">
+            {{ t("sidebar.createProject") }}
+          </h2>
+        </div>
+      </template>
+      <div class="space-y-3">
+        <div>
+          <label class="form-hint">{{ t("sidebar.projectName") }}</label>
+          <input
+            v-model="newProjectName"
+            class="input-base mt-1 text-sm"
+            :placeholder="t('sidebar.projectName')"
+          />
+        </div>
+      </div>
+      <template #submit>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-small" @click="cancelCreate">
+            {{ t("sidebar.deleteCancelButton") }}
+          </button>
+          <button
+            type="submit"
+            class="btn-primary btn-small"
+            :disabled="!newProjectName.trim()"
+          >
+            {{ t("sidebar.create") }}
+          </button>
+        </div>
+      </template>
+    </Form>
 
     <!-- Edit project modal -->
     <Form
@@ -194,7 +284,7 @@ function confirmDelete() {
     >
       <template #header>
         <div class="flex items-center gap-2">
-          <Pencil :size="18" class="text-primary" />
+          <IconPencil :size="18" class="text-primary" />
           <h2 class="text-sm font-semibold">{{ t("sidebar.editProject") }}</h2>
         </div>
       </template>
@@ -205,14 +295,6 @@ function confirmDelete() {
             v-model="editName"
             class="input-base mt-1 text-sm"
             :placeholder="t('sidebar.projectName')"
-          />
-        </div>
-        <div>
-          <label class="form-hint">{{ t("sidebar.projectDesc") }}</label>
-          <input
-            v-model="editDesc"
-            class="input-base mt-1 text-sm"
-            :placeholder="t('sidebar.projectDesc')"
           />
         </div>
       </div>
@@ -246,7 +328,7 @@ function confirmDelete() {
     >
       <template #header>
         <div class="flex items-center gap-2">
-          <AlertTriangle :size="18" class="text-destructive" />
+          <IconAlertTriangle :size="18" class="text-destructive" />
           <h2 class="text-sm font-semibold">
             {{ t("sidebar.deleteConfirmTitle") }}
           </h2>

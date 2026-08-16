@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { ChevronDown, Check, X } from "lucide-vue-next";
+import { IconChevronDown, IconCheck, IconX } from "@tabler/icons-vue";
 
 interface Option {
   value: number;
@@ -83,9 +83,9 @@ onUnmounted(() => {
           class="text-muted-foreground transition hover:text-foreground"
           @click.stop="clear"
         >
-          <X :size="14" />
+          <IconX :size="14" />
         </button>
-        <ChevronDown
+        <IconChevronDown
           :size="16"
           class="text-muted-foreground transition-transform"
           :class="{ 'rotate-180': open }"
@@ -110,7 +110,7 @@ onUnmounted(() => {
             ),
           }"
         >
-          <Check v-if="modelValue.includes(opt.value)" :size="12" />
+          <IconCheck v-if="modelValue.includes(opt.value)" :size="12" />
         </span>
         <span class="truncate">{{ opt.label }}</span>
         <input

@@ -2,3 +2,17 @@ dev:
   desc: Run development
   script: |
     pnpm dev
+
+push:
+  desc: Push to GitHub
+  color: cyan
+  args:
+  - "tag:str?"
+  script: |
+    if [ -n "$tag" ]; then
+      git tag -f "$tag"
+      git push origin "$tag" --force
+      git push
+    else
+      git push origin main
+    fi

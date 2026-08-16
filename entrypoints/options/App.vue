@@ -13,6 +13,8 @@ const apiDomain = ref("");
 const theme = ref<"light" | "dark" | "system">("system");
 const accent = ref<string>("indigo");
 const language = ref<Language>("ru");
+const uiScale = ref(75);
+const animationsEnabled = ref(true);
 const saved = ref(false);
 
 onMounted(async () => {
@@ -20,6 +22,8 @@ onMounted(async () => {
   theme.value = settings.value.theme;
   accent.value = settings.value.accent;
   language.value = settings.value.language;
+  uiScale.value = settings.value.uiScale;
+  animationsEnabled.value = settings.value.animationsEnabled;
 });
 
 function handleSave() {
@@ -27,6 +31,11 @@ function handleSave() {
   settings.value.theme = theme.value;
   settings.value.accent = accent.value as any;
   settings.value.language = language.value;
+  settings.value.uiScale = Math.max(
+    25,
+    Math.min(150, Math.round(uiScale.value)),
+  );
+  settings.value.animationsEnabled = animationsEnabled.value;
   saveSettings();
   applyTheme(theme.value);
   applyAccent(accent.value as any);
@@ -84,6 +93,43 @@ function handleSave() {
             <option value="ru">{{ t("languages.ru") }}</option>
             <option value="en">{{ t("languages.en") }}</option>
           </select>
+        </div>
+
+        <div>
+          <label class="form-label">{{ t("settings.uiScale") }}</label>
+          <div class="mt-2 flex gap-2">
+            <button
+              v-for="val in [100, 125, 150, 175]"
+              :key="val"
+              class="rounded-lg border px-3 py-1.5 text-sm transition"
+              :class="
+                uiScale === val
+                  ? 'border-primary bg-primary/10 text-primary font-medium'
+                  : 'border-foreground/10 text-muted-foreground hover:bg-muted'
+              "
+              @click="
+                uiScale = val;
+                handleSave();
+              "
+            >
+              {{ val }}%
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">{{ t("settings.animations") }}</label>
+          <label
+            class="mt-2 flex h-9 items-center gap-2 whitespace-nowrap text-sm text-foreground cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              class="h-4 w-4 rounded border-foreground/20"
+              v-model="animationsEnabled"
+              @change="handleSave"
+            />
+            <span>{{ t("settings.animationsHint") }}</span>
+          </label>
         </div>
 
         <div class="flex items-center gap-3">

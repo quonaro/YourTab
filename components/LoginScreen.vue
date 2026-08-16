@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { LogIn, Loader2 } from "lucide-vue-next";
+import { IconLogin, IconLoader2 } from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useI18n } from "@/composables/useI18n";
 
@@ -66,8 +66,8 @@ function handleLogin() {
         :disabled="props.loading"
         @click="handleLogin"
       >
-        <Loader2 v-if="props.loading" :size="18" class="animate-spin" />
-        <LogIn v-else :size="18" />
+        <IconLoader2 v-if="props.loading" :size="18" class="animate-spin" />
+        <IconLogin v-else :size="18" />
         {{ props.loading ? t("login.connecting") : t("login.signIn") }}
       </button>
     </div>

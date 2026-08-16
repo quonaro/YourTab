@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from "vue";
-import { Building2, Lock, HardDrive, ChevronDown } from "lucide-vue-next";
+import {
+  IconBuilding,
+  IconLock,
+  IconDatabase,
+  IconChevronDown,
+} from "@tabler/icons-vue";
 import { useApi } from "@/composables/useApi";
 import { useI18n } from "@/composables/useI18n";
 import { useAuth } from "@/composables/useAuth";
@@ -71,6 +76,14 @@ function syncSelectedOrg(newOrg: string | null) {
   }
 }
 
+watch(isAuthenticated, (authed) => {
+  if (authed) {
+    loadRemoteOrgs();
+  } else {
+    remoteOrganizations.value = [];
+  }
+});
+
 watch(org, syncSelectedOrg);
 
 watch(remoteOrganizations, () => {
@@ -93,8 +106,8 @@ function selectOrgEntry(entry: OrgEntry) {
         class="flex items-center gap-1.5 rounded-lg px-2 py-1 text-foreground/80 transition hover:bg-muted"
         @click="showOrgDropdown = !showOrgDropdown"
       >
-        <HardDrive v-if="selectedOrgType === 'local'" :size="15" />
-        <Building2 v-else :size="15" />
+        <IconDatabase v-if="selectedOrgType === 'local'" :size="15" />
+        <IconBuilding v-else :size="15" />
         {{
           org === "local"
             ? t("breadcrumbs.localOrg")
@@ -102,12 +115,12 @@ function selectOrgEntry(entry: OrgEntry) {
         }}
         <span
           v-if="readOnly"
-          class="flex items-center gap-0.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground"
+          class="flex items-center gap-0.5 rounded bg-yellow-500/10 px-1 py-0.5 text-[10px] font-medium text-yellow-700 dark:text-yellow-400"
         >
-          <Lock :size="10" />
+          <IconLock :size="10" />
           {{ t("breadcrumbs.readOnly") }}
         </span>
-        <ChevronDown :size="14" class="text-muted-foreground" />
+        <IconChevronDown :size="14" class="text-muted-foreground" />
       </button>
       <div
         v-if="showOrgDropdown"
@@ -119,7 +132,7 @@ function selectOrgEntry(entry: OrgEntry) {
           :class="org === 'local' ? 'bg-primary/10 font-medium' : ''"
           @click="selectOrgEntry(LOCAL_ORG)"
         >
-          <HardDrive :size="13" class="shrink-0 text-muted-foreground" />
+          <IconDatabase :size="13" class="shrink-0 text-muted-foreground" />
           {{ t("breadcrumbs.localOrg") }}
         </button>
 
@@ -135,7 +148,7 @@ function selectOrgEntry(entry: OrgEntry) {
               selectOrgEntry({ type: 'remote', slug: o.slug, name: o.name })
             "
           >
-            <Lock
+            <IconLock
               v-if="isOrgReadOnly(o)"
               :size="12"
               class="shrink-0 text-muted-foreground"

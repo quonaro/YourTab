@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
-import { Settings } from "lucide-vue-next";
+import { IconSettings } from "@tabler/icons-vue";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n } from "@/composables/useI18n";
+import { useSettings } from "@/composables/useSettings";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
 import { readLastLocation, writeLastLocation } from "@/lib/settings";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
@@ -14,6 +15,7 @@ import type { Project } from "@/lib/types";
 
 const { t } = useI18n();
 const { initTheme } = useTheme();
+const { settings } = useSettings();
 
 const selectedOrg = ref<string | null>(null);
 const selectedProject = ref<string | null>(null);
@@ -102,12 +104,12 @@ const showBoard = computed(() => selectedOrg.value && selectedProject.value);
 
 const orgReadOnly = computed(() => breadcrumbsRef.value?.readOnly ?? false);
 
-function handleCreateProject(name: string, description?: string) {
-  orgData.createProject(name, description);
+function handleCreateProject(name: string) {
+  orgData.createProject(name);
 }
 
-function handleEditProject(id: number, name: string, description?: string) {
-  orgData.updateProject(id, name, description);
+function handleEditProject(id: number, name: string) {
+  orgData.updateProject(id, name);
 }
 
 function handleDeleteProject(id: number) {
@@ -116,13 +118,19 @@ function handleDeleteProject(id: number) {
 </script>
 
 <template>
-  <div class="flex h-screen flex-col bg-background text-foreground">
+  <div
+    class="flex flex-col bg-background text-foreground"
+    :style="{
+      zoom: settings.uiScale / 100,
+      height: `calc(100vh / ${settings.uiScale / 100})`,
+    }"
+  >
     <!-- Header -->
     <header
       class="flex items-center justify-between border-b border-foreground/10 px-4 py-3"
     >
       <Breadcrumbs ref="breadcrumbsRef" v-model:org="selectedOrg" />
-      <div class="absolute left-1/2 -translate-x-1/2 z-50">
+      <div class="absolute left-1/2 -translate-x-1/2 z-30">
         <QuickLinks />
       </div>
       <button
@@ -130,7 +138,7 @@ function handleDeleteProject(id: number) {
         :title="t('settings.title')"
         @click="settingsOpen = true"
       >
-        <Settings :size="18" />
+        <IconSettings :size="18" />
       </button>
     </header>
 

@@ -20,6 +20,8 @@ export interface ExtensionSettings {
   quickLinks: QuickLink[];
   autoRefreshEnabled: boolean;
   autoRefreshInterval: number; // seconds
+  uiScale: number; // percent (50–150)
+  animationsEnabled: boolean;
 }
 
 export const defaultSettings: ExtensionSettings = {
@@ -30,6 +32,8 @@ export const defaultSettings: ExtensionSettings = {
   quickLinks: [],
   autoRefreshEnabled: false,
   autoRefreshInterval: 60,
+  uiScale: 100,
+  animationsEnabled: true,
 };
 
 export const ACCENTS: Record<AccentKey, { label: string; value: string }> = {
@@ -62,6 +66,10 @@ export function readSettings(): ExtensionSettings {
       autoRefreshInterval: typeof parsed.autoRefreshInterval === "number" && parsed.autoRefreshInterval > 0
         ? parsed.autoRefreshInterval
         : defaultSettings.autoRefreshInterval,
+      uiScale: typeof parsed.uiScale === "number" && parsed.uiScale >= 25 && parsed.uiScale <= 150
+        ? parsed.uiScale
+        : defaultSettings.uiScale,
+      animationsEnabled: parsed.animationsEnabled ?? defaultSettings.animationsEnabled,
  };
   } catch {
     return defaultSettings;
