@@ -40,7 +40,7 @@ jobs:
       - name: Collect zip files
         run: |
           mkdir -p zips
-          find .output -name '*.zip' -exec cp {} zips/ \;
+          find .output -name '*.zip' ! -name '*-sources.zip' -exec cp {} zips/ \;
           ls -la zips/
 
       - name: Upload artifact
