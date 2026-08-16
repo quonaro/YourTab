@@ -13,6 +13,9 @@ declare module "wxt/browser" {
     | "/fonts/stetica/medium-italic.otf"
     | "/fonts/stetica/medium.otf"
     | "/fonts/stetica/regular.otf"
+    | "/icon-128.png"
+    | "/icon-16.png"
+    | "/icon-48.png"
     | "/newtab.html"
     | "/options.html";
   type HtmlPublicPath = Extract<PublicPath, `${string}.html`>;
