@@ -85,8 +85,18 @@ jobs:
           unzip -q artifacts/*-firefox.zip -d amo-source
           ls -la amo-source/
 
+      - name: Create AMO metadata
+        run: |
+          cat > amo-metadata.json <<'EOF'
+          {
+            "categories": ["other"],
+            "summary": { "en-US": "YourTab agile board in your new tab" },
+            "version": { "license": "MIT" }
+          }
+          EOF
+
       - name: Submit to AMO
-        run: npx web-ext sign --source-dir amo-source --channel listed
+        run: npx web-ext sign --source-dir amo-source --channel listed --metadata amo-metadata.json
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
