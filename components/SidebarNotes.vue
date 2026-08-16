@@ -2,7 +2,6 @@
 import { computed, watch, onBeforeUnmount } from "vue";
 import { useEditor, EditorContent } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import { Markdown } from "tiptap-markdown";
 import {
   IconBold,
@@ -26,8 +25,9 @@ const activeNote = computed(
 
 const editor = useEditor({
   extensions: [
-    StarterKit,
-    Link.configure({ openOnClick: false }),
+    StarterKit.configure({
+      link: { openOnClick: false },
+    }),
     Markdown.configure({ breaks: true }),
   ],
   content: activeNote.value?.text ?? "",
