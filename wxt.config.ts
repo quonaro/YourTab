@@ -8,6 +8,7 @@ const version = execSync("git describe --tags --abbrev=0")
   .replace(/^v/, "");
 
 export default defineConfig({
+  srcDir: "composables",
   manifest: {
     name: "YourTab",
     description: "YourTab agile board in your new tab",
