@@ -2,8 +2,6 @@ name: Release & Publish
 
 on:
   push:
-    branches:
-    - main
     tags:
     - "v*.*.*"
 
