@@ -18,8 +18,6 @@ export interface ExtensionSettings {
   accent: AccentKey;
   language: Language;
   quickLinks: QuickLink[];
-  autoRefreshEnabled: boolean;
-  autoRefreshInterval: number; // seconds
   uiScale: number; // percent (50–150)
   animationsEnabled: boolean;
 }
@@ -30,8 +28,6 @@ export const defaultSettings: ExtensionSettings = {
   accent: "indigo",
   language: "ru",
   quickLinks: [],
-  autoRefreshEnabled: false,
-  autoRefreshInterval: 60,
   uiScale: 100,
   animationsEnabled: true,
 };
@@ -62,10 +58,6 @@ export function readSettings(): ExtensionSettings {
       quickLinks: Array.isArray(parsed.quickLinks)
         ? (parsed.quickLinks as QuickLink[])
         : defaultSettings.quickLinks,
-      autoRefreshEnabled: parsed.autoRefreshEnabled ?? defaultSettings.autoRefreshEnabled,
-      autoRefreshInterval: typeof parsed.autoRefreshInterval === "number" && parsed.autoRefreshInterval > 0
-        ? parsed.autoRefreshInterval
-        : defaultSettings.autoRefreshInterval,
       uiScale: typeof parsed.uiScale === "number" && parsed.uiScale >= 25 && parsed.uiScale <= 150
         ? parsed.uiScale
         : defaultSettings.uiScale,
@@ -107,6 +99,27 @@ export function readLastLocation(): LastLocation {
 export function writeLastLocation(loc: LastLocation): void {
   try {
     localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(loc));
+  } catch {
+    // ignore
+  }
+}
+
+// ─── Sidebar collapsed state persistence ───
+
+const SIDEBAR_COLLAPSED_KEY = "yourtask-sidebar-collapsed";
+
+export function readSidebarCollapsed(): boolean {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function writeSidebarCollapsed(collapsed: boolean): void {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
   } catch {
     // ignore
   }

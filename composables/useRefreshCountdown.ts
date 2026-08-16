@@ -1,54 +1,69 @@
-import { ref } from "vue";
-import { useSettings } from "./useSettings";
+import { ref, watch } from "vue";
+import { useWebSocket } from "./useWebSocket";
+
+const FALLBACK_INTERVAL = 30; // seconds
 
 const nextRefreshIn = ref(0);
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 let nextRefreshAt = 0;
+let activeRefreshFn: (() => void) | null = null;
+let wsUnwatch: (() => void) | null = null;
+
+function startTimers() {
+  stopTimers();
+  nextRefreshAt = Date.now() + FALLBACK_INTERVAL * 1000;
+  nextRefreshIn.value = FALLBACK_INTERVAL;
+  refreshTimer = setInterval(() => {
+    activeRefreshFn?.();
+    nextRefreshAt = Date.now() + FALLBACK_INTERVAL * 1000;
+  }, FALLBACK_INTERVAL * 1000);
+  countdownTimer = setInterval(() => {
+    nextRefreshIn.value = Math.max(
+      0,
+      Math.ceil((nextRefreshAt - Date.now()) / 1000),
+    );
+  }, 1000);
+}
+
+function stopTimers() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+  nextRefreshIn.value = 0;
+}
 
 export function useRefreshCountdown() {
-  const { settings } = useSettings();
+  const { connected } = useWebSocket();
 
   function setupAutoRefresh(refreshFn: () => void) {
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
-      refreshTimer = null;
-    }
-    if (countdownTimer) {
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    }
-    nextRefreshIn.value = 0;
-    if (
-      settings.value.autoRefreshEnabled &&
-      settings.value.autoRefreshInterval > 0
-    ) {
-      nextRefreshAt = Date.now() + settings.value.autoRefreshInterval * 1000;
-      nextRefreshIn.value = settings.value.autoRefreshInterval;
-      refreshTimer = setInterval(() => {
-        refreshFn();
-        nextRefreshAt = Date.now() + settings.value.autoRefreshInterval * 1000;
-      }, settings.value.autoRefreshInterval * 1000);
-      countdownTimer = setInterval(() => {
-        const remaining = Math.max(
-          0,
-          Math.ceil((nextRefreshAt - Date.now()) / 1000),
-        );
-        nextRefreshIn.value = remaining;
-      }, 1000);
-    }
+    activeRefreshFn = refreshFn;
+    if (wsUnwatch) wsUnwatch();
+    wsUnwatch = watch(
+      connected,
+      (isConnected) => {
+        if (isConnected) {
+          stopTimers();
+        } else {
+          startTimers();
+        }
+      },
+      { immediate: true },
+    );
   }
 
   function teardownAutoRefresh() {
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
-      refreshTimer = null;
+    stopTimers();
+    if (wsUnwatch) {
+      wsUnwatch();
+      wsUnwatch = null;
     }
-    if (countdownTimer) {
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    }
-    nextRefreshIn.value = 0;
+    activeRefreshFn = null;
   }
 
   return {

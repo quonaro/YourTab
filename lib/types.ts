@@ -143,7 +143,6 @@ export interface TaskFilters {
   priority: number | null;
   sort: string;
   includeArchived: boolean;
-  hasChildren: boolean;
 }
 
 export interface TaskListParams {

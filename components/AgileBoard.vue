@@ -40,6 +40,27 @@ import type {
   TaskListParams,
 } from "@/lib/types";
 
+const STATUS_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#f59e0b",
+  "#eab308",
+  "#84cc16",
+  "#22c55e",
+  "#10b981",
+  "#14b8a6",
+  "#06b6d4",
+  "#0ea5e9",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#d946ef",
+  "#ec4899",
+  "#f43f5e",
+  "#64748b",
+];
+
 const { t } = useI18n();
 const { settings } = useSettings();
 const { nextRefreshIn, setupAutoRefresh, teardownAutoRefresh } =
@@ -118,7 +139,6 @@ const filters = ref<TaskFilters>({
   priority: null,
   sort: "default",
   includeArchived: false,
-  hasChildren: false,
 });
 const filterSidebarOpen = ref(false);
 const members = ref<UserInfo[]>([]);
@@ -180,8 +200,7 @@ const hasActiveFilters = computed(() => {
     f.sprintIds.length > 0 ||
     f.priority != null ||
     (f.sort != null && f.sort !== "default") ||
-    f.includeArchived ||
-    f.hasChildren
+    f.includeArchived
   );
 });
 
@@ -196,7 +215,6 @@ const activeFilterCount = computed(() => {
   if (f.priority != null) count++;
   if (f.sort != null && f.sort !== "default") count++;
   if (f.includeArchived) count++;
-  if (f.hasChildren) count++;
   return count;
 });
 
@@ -213,7 +231,6 @@ function buildTaskParams(): TaskListParams | undefined {
     priority: f.priority ?? undefined,
     sort: f.sort && f.sort !== "default" ? f.sort : undefined,
     includeArchived: f.includeArchived || undefined,
-    parentOnly: f.hasChildren || undefined,
   };
 }
 
@@ -228,7 +245,6 @@ function clearAllFilters() {
     priority: null,
     sort: "default",
     includeArchived: false,
-    hasChildren: false,
   };
   searchQuery.value = "";
   if (isRemote.value) loadData();
@@ -322,7 +338,15 @@ function resetColumnOrder() {
 // ─── Status drag reorder ───
 const draggedStatusId = ref<number | null>(null);
 
-function onStatusDragStart(statusId: number) {
+function onStatusDragStart(statusId: number, e: DragEvent) {
+  const target = e.target as HTMLElement;
+  if (
+    target.closest("[data-status-trigger]") ||
+    target.closest("[data-status-menu]")
+  ) {
+    e.preventDefault();
+    return;
+  }
   draggedStatusId.value = statusId;
 }
 function onStatusDragEnd() {
@@ -365,7 +389,15 @@ function toggleBoard(boardId: number) {
 // ─── Board drag reorder ───
 const draggedBoardId = ref<number | null>(null);
 
-function onBoardDragStart(boardId: number) {
+function onBoardDragStart(boardId: number, e: DragEvent) {
+  const target = e.target as HTMLElement;
+  if (
+    target.closest("[data-board-trigger]") ||
+    target.closest("[data-board-menu]")
+  ) {
+    e.preventDefault();
+    return;
+  }
   draggedBoardId.value = boardId;
 }
 function onBoardDragEnd() {
@@ -443,11 +475,45 @@ const editStatusName = ref("");
 const editStatusColor = ref("");
 const deleteStatusTarget = ref<TaskStatus | null>(null);
 const statusActionsOpen = ref<number | null>(null);
+const statusMenuPos = ref<{ top: number; left: number } | null>(null);
+
+function toggleStatusMenu(statusId: number) {
+  if (statusActionsOpen.value === statusId) {
+    statusActionsOpen.value = null;
+    statusMenuPos.value = null;
+    return;
+  }
+  const trigger = document.querySelector<HTMLElement>(
+    `[data-status-trigger="${statusId}"]`,
+  );
+  if (trigger) {
+    const rect = trigger.getBoundingClientRect();
+    statusMenuPos.value = { top: rect.bottom + 4, left: rect.right - 176 };
+  }
+  statusActionsOpen.value = statusId;
+}
 
 // ─── Board CRUD UI ───
 const showCreateBoard = ref(false);
 const newBoardName = ref("");
 const boardActionsOpen = ref<number | null>(null);
+const boardMenuPos = ref<{ top: number; left: number } | null>(null);
+
+function toggleBoardMenu(boardId: number) {
+  if (boardActionsOpen.value === boardId) {
+    boardActionsOpen.value = null;
+    boardMenuPos.value = null;
+    return;
+  }
+  const trigger = document.querySelector<HTMLElement>(
+    `[data-board-trigger="${boardId}"]`,
+  );
+  if (trigger) {
+    const rect = trigger.getBoundingClientRect();
+    boardMenuPos.value = { top: rect.bottom + 4, left: rect.right - 176 };
+  }
+  boardActionsOpen.value = boardId;
+}
 const editBoardTarget = ref<Board | null>(null);
 const editBoardName = ref("");
 const deleteBoardTarget = ref<Board | null>(null);
@@ -536,11 +602,6 @@ const displayTasks = computed<Task[]>(() => {
   }
   if (!f.includeArchived) {
     result = result.filter((t) => !t.archived);
-  }
-  if (f.hasChildren) {
-    result = result.filter(
-      (t) => (t.childrenCount ?? 0) > 0 || (t.children?.length ?? 0) > 0,
-    );
   }
   return result;
 });
@@ -654,7 +715,6 @@ watch(
       priority: null,
       sort: "default",
       includeArchived: false,
-      hasChildren: false,
     };
     members.value = [];
     tags.value = [];
@@ -721,13 +781,8 @@ async function silentRefresh() {
   }
 }
 
-// setupAutoRefresh is provided by useRefreshCountdown composable
-
-watch(
-  () => [settings.value.autoRefreshEnabled, settings.value.autoRefreshInterval],
-  () => setupAutoRefresh(silentRefresh),
-  { immediate: true },
-);
+// Auto-refresh is a fallback that activates when WebSocket is disconnected.
+setupAutoRefresh(silentRefresh);
 
 function handleWSMessage(msg: WSMessage) {
   switch (msg.type) {
@@ -1007,6 +1062,7 @@ function startEditStatus(status: TaskStatus) {
   editStatusName.value = status.name;
   editStatusColor.value = status.color;
   statusActionsOpen.value = null;
+  statusMenuPos.value = null;
 }
 
 function cancelEditStatus() {
@@ -1040,6 +1096,7 @@ async function handleUpdateStatus() {
 function startDeleteStatus(status: TaskStatus) {
   deleteStatusTarget.value = status;
   statusActionsOpen.value = null;
+  statusMenuPos.value = null;
 }
 
 function cancelDeleteStatus() {
@@ -1140,6 +1197,7 @@ function startEditBoard(board: Board) {
   editBoardTarget.value = board;
   editBoardName.value = board.name;
   boardActionsOpen.value = null;
+  boardMenuPos.value = null;
 }
 
 function cancelEditBoard() {
@@ -1169,6 +1227,7 @@ async function handleUpdateBoard() {
 function startDeleteBoard(board: Board) {
   deleteBoardTarget.value = board;
   boardActionsOpen.value = null;
+  boardMenuPos.value = null;
 }
 
 function cancelDeleteBoard() {
@@ -1307,16 +1366,6 @@ async function handleDeleteBoardConfirm() {
               <IconPlus :size="16" />
             </button>
           </div>
-          <button
-            v-if="columnOrderChanged"
-            type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-lg border border-destructive bg-destructive text-destructive-foreground transition hover:bg-destructive/90"
-            :aria-label="t('board.resetColumnOrder')"
-            :title="t('board.resetColumnOrder')"
-            @click="resetColumnOrder"
-          >
-            <IconRotateClockwise :size="16" />
-          </button>
         </div>
 
         <div
@@ -1369,7 +1418,7 @@ async function handleDeleteBoardConfirm() {
             ]"
             :style="{ width: `${COLUMN_WIDTH}px` }"
             draggable="true"
-            @dragstart="onStatusDragStart(status.id)"
+            @dragstart="onStatusDragStart(status.id, $event)"
             @dragend="onStatusDragEnd"
             @dragover="onStatusDragOver(status.id, $event)"
             @drop="onStatusDrop"
@@ -1385,47 +1434,53 @@ async function handleDeleteBoardConfirm() {
             <span class="flex-1 truncate text-sm font-semibold">{{
               status.name
             }}</span>
-            <span class="shrink-0 text-xs text-muted-foreground">
-              {{ tasksByStatus.get(status.id)?.length ?? 0 }}
-            </span>
             <button
               v-if="!readOnly && !isRemote"
               :data-status-trigger="status.id"
               draggable="false"
               class="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-              @mousedown.prevent.stop
-              @click.stop="
-                statusActionsOpen =
-                  statusActionsOpen === status.id ? null : status.id
-              "
+              @click.stop="toggleStatusMenu(status.id)"
             >
               <IconDotsVertical :size="14" />
             </button>
-            <!-- Status actions dropdown -->
-            <div
-              v-if="statusActionsOpen === status.id"
-              :data-status-menu="status.id"
-              draggable="false"
-              class="dropdown-panel absolute right-0 top-full z-20 mt-1 w-44 p-2"
-            >
-              <button
-                class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
-                @click.stop="startEditStatus(status)"
-              >
-                <IconPencil :size="13" />
-                {{ t("board.editStatus") }}
-              </button>
-              <button
-                class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
-                @click.stop="startDeleteStatus(status)"
-              >
-                <IconTrash :size="13" />
-                {{ t("board.deleteStatus") }}
-              </button>
-            </div>
           </div>
         </TransitionGroup>
       </div>
+
+      <!-- Status actions dropdown (teleported to body) -->
+      <Teleport to="body">
+        <div
+          v-if="statusActionsOpen !== null && statusMenuPos"
+          :data-status-menu="statusActionsOpen"
+          :style="{
+            position: 'fixed',
+            top: `${statusMenuPos.top}px`,
+            left: `${statusMenuPos.left}px`,
+          }"
+          class="z-50 w-44 rounded-lg border border-foreground/10 bg-background p-2 shadow-lg"
+        >
+          <button
+            class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
+            @click.stop="
+              startEditStatus(statuses.find((s) => s.id === statusActionsOpen)!)
+            "
+          >
+            <IconPencil :size="13" />
+            {{ t("board.editStatus") }}
+          </button>
+          <button
+            class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
+            @click.stop="
+              startDeleteStatus(
+                statuses.find((s) => s.id === statusActionsOpen)!,
+              )
+            "
+          >
+            <IconTrash :size="13" />
+            {{ t("board.deleteStatus") }}
+          </button>
+        </div>
+      </Teleport>
 
       <!-- Pile section (tasks without a board) -->
       <div v-if="pileTasks.length > 0" class="flex flex-col gap-2">
@@ -1447,11 +1502,6 @@ async function handleDeleteBoardConfirm() {
             <h3 class="flex-1 text-sm text-foreground">
               {{ t("board.pile") }}
             </h3>
-            <span
-              class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-            >
-              {{ pileTasks.length }}
-            </span>
           </button>
         </div>
         <div
@@ -1589,7 +1639,7 @@ async function handleDeleteBoardConfirm() {
               :class="!readOnly ? 'cursor-grab active:cursor-grabbing' : ''"
               :style="{ width: `${orderedStatuses.length * COLUMN_WIDTH}px` }"
               :draggable="!readOnly"
-              @dragstart="onBoardDragStart(row.id)"
+              @dragstart="onBoardDragStart(row.id, $event)"
               @dragend="onBoardDragEnd"
               @click="toggleBoard(row.id)"
               @keydown.enter="toggleBoard(row.id)"
@@ -1605,45 +1655,15 @@ async function handleDeleteBoardConfirm() {
                 class="shrink-0 text-muted-foreground"
               />
               <h3 class="flex-1 text-sm text-foreground">{{ row.name }}</h3>
-              <span
-                class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-              >
-                {{ boardTaskCount(row.id) }}
-              </span>
               <button
                 v-if="!readOnly && orgType === 'local'"
                 :data-board-trigger="row.id"
                 draggable="false"
                 class="relative shrink-0 rounded p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
-                @mousedown.prevent.stop
-                @click.stop="
-                  boardActionsOpen = boardActionsOpen === row.id ? null : row.id
-                "
+                @click.stop="toggleBoardMenu(row.id)"
               >
                 <IconDotsVertical :size="14" />
               </button>
-              <!-- Board actions dropdown -->
-              <div
-                v-if="boardActionsOpen === row.id"
-                :data-board-menu="row.id"
-                draggable="false"
-                class="dropdown-panel absolute right-0 top-full z-20 mt-1 w-44 p-2"
-              >
-                <button
-                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
-                  @click.stop="startEditBoard(row.board)"
-                >
-                  <IconPencil :size="13" />
-                  {{ t("board.editBoard") }}
-                </button>
-                <button
-                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
-                  @click.stop="startDeleteBoard(row.board)"
-                >
-                  <IconTrash :size="13" />
-                  {{ t("board.deleteBoard") }}
-                </button>
-              </div>
             </div>
           </div>
           <!-- Board cells -->
@@ -1759,6 +1779,39 @@ async function handleDeleteBoardConfirm() {
           </div>
         </div>
       </TransitionGroup>
+
+      <!-- Board actions dropdown (teleported to body) -->
+      <Teleport to="body">
+        <div
+          v-if="boardActionsOpen !== null && boardMenuPos"
+          :data-board-menu="boardActionsOpen"
+          :style="{
+            position: 'fixed',
+            top: `${boardMenuPos.top}px`,
+            left: `${boardMenuPos.left}px`,
+          }"
+          class="z-50 w-44 rounded-lg border border-foreground/10 bg-background p-2 shadow-lg"
+        >
+          <button
+            class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
+            @click.stop="
+              startEditBoard(boards.find((b) => b.id === boardActionsOpen)!)
+            "
+          >
+            <IconPencil :size="13" />
+            {{ t("board.editBoard") }}
+          </button>
+          <button
+            class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
+            @click.stop="
+              startDeleteBoard(boards.find((b) => b.id === boardActionsOpen)!)
+            "
+          >
+            <IconTrash :size="13" />
+            {{ t("board.deleteBoard") }}
+          </button>
+        </div>
+      </Teleport>
     </div>
 
     <!-- Empty state -->
@@ -1831,13 +1884,20 @@ async function handleDeleteBoardConfirm() {
       </div>
       <div>
         <label class="form-hint">{{ t("board.statusColor") }}</label>
-        <div class="mt-1 flex items-center gap-2">
-          <input
-            v-model="newStatusColor"
-            type="color"
-            class="h-9 w-14 rounded border-0 bg-transparent p-0"
+        <div class="mt-2 grid grid-cols-9 gap-1.5">
+          <button
+            v-for="color in STATUS_COLORS"
+            :key="color"
+            type="button"
+            class="h-7 w-7 rounded-md border-2 transition-transform hover:scale-110"
+            :class="
+              newStatusColor.toLowerCase() === color
+                ? 'border-zinc-900 dark:border-zinc-100'
+                : 'border-transparent'
+            "
+            :style="{ backgroundColor: color }"
+            @click="newStatusColor = color"
           />
-          <input v-model="newStatusColor" class="input-base flex-1 text-sm" />
         </div>
       </div>
     </div>
@@ -1882,13 +1942,20 @@ async function handleDeleteBoardConfirm() {
       </div>
       <div>
         <label class="form-hint">{{ t("board.statusColor") }}</label>
-        <div class="mt-1 flex items-center gap-2">
-          <input
-            v-model="editStatusColor"
-            type="color"
-            class="h-9 w-14 rounded border-0 bg-transparent p-0"
+        <div class="mt-2 grid grid-cols-9 gap-1.5">
+          <button
+            v-for="color in STATUS_COLORS"
+            :key="color"
+            type="button"
+            class="h-7 w-7 rounded-md border-2 transition-transform hover:scale-110"
+            :class="
+              editStatusColor.toLowerCase() === color
+                ? 'border-zinc-900 dark:border-zinc-100'
+                : 'border-transparent'
+            "
+            :style="{ backgroundColor: color }"
+            @click="editStatusColor = color"
           />
-          <input v-model="editStatusColor" class="input-base flex-1 text-sm" />
         </div>
       </div>
     </div>
@@ -2158,26 +2225,6 @@ async function handleDeleteBoardConfirm() {
                     "
                   />
                   <span>{{ t("boardFilters.includeArchived") }}</span>
-                </label>
-              </div>
-
-              <!-- Has children -->
-              <div class="flex w-full flex-col gap-1.5">
-                <label class="text-xs font-medium text-foreground/70">{{
-                  t("boardFilters.hasChildrenLabel")
-                }}</label>
-                <label
-                  class="flex h-9 items-center gap-2 whitespace-nowrap text-sm text-foreground cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-foreground/20"
-                    :checked="filters.hasChildren"
-                    @change="
-                      updateFilter({ hasChildren: !filters.hasChildren })
-                    "
-                  />
-                  <span>{{ t("boardFilters.hasChildren") }}</span>
                 </label>
               </div>
 

@@ -38,9 +38,8 @@ const apiDomain = ref("");
 const theme = ref<"light" | "dark" | "system">("system");
 const accent = ref<string>("indigo");
 const language = ref<Language>("ru");
-const autoRefreshEnabled = ref(false);
-const autoRefreshInterval = ref(60);
 const uiScale = ref(75);
+const animationsEnabled = ref(true);
 const saved = ref(false);
 
 onMounted(() => {
@@ -48,9 +47,8 @@ onMounted(() => {
   theme.value = settings.value.theme;
   accent.value = settings.value.accent;
   language.value = settings.value.language;
-  autoRefreshEnabled.value = settings.value.autoRefreshEnabled;
-  autoRefreshInterval.value = settings.value.autoRefreshInterval;
   uiScale.value = settings.value.uiScale;
+  animationsEnabled.value = settings.value.animationsEnabled;
 });
 
 function handleSave() {
@@ -58,15 +56,11 @@ function handleSave() {
   settings.value.theme = theme.value;
   settings.value.accent = accent.value as any;
   settings.value.language = language.value;
-  settings.value.autoRefreshEnabled = autoRefreshEnabled.value;
-  settings.value.autoRefreshInterval = Math.max(
-    5,
-    Math.round(autoRefreshInterval.value),
-  );
   settings.value.uiScale = Math.max(
     25,
     Math.min(150, Math.round(uiScale.value)),
   );
+  settings.value.animationsEnabled = animationsEnabled.value;
   saveSettings();
   applyTheme(theme.value);
   applyAccent(accent.value as any);
@@ -220,32 +214,6 @@ async function handleImportFile(event: Event) {
 
       <hr class="border-foreground/10" />
 
-      <!-- Auto-refresh -->
-      <section class="space-y-3">
-        <label class="flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            class="h-4 w-4 rounded border-foreground/20"
-            v-model="autoRefreshEnabled"
-            @change="handleSave"
-          />
-          <span>{{ t("settings.autoRefresh") }}</span>
-        </label>
-        <div v-if="autoRefreshEnabled" class="flex items-center gap-2 pl-6">
-          <input
-            v-model.number="autoRefreshInterval"
-            type="number"
-            min="5"
-            step="5"
-            class="input-base w-20 text-sm"
-            @change="handleSave"
-          />
-          <span class="form-hint">{{ t("settings.autoRefreshInterval") }}</span>
-        </div>
-      </section>
-
-      <hr class="border-foreground/10" />
-
       <!-- Appearance -->
       <section class="space-y-3">
         <h3 class="form-label">{{ t("settings.appearance") }}</h3>
@@ -298,7 +266,7 @@ async function handleImportFile(event: Event) {
           <label class="form-hint">{{ t("settings.uiScale") }}</label>
           <div class="mt-2 flex gap-2">
             <button
-              v-for="val in [100, 125, 150, 175]"
+              v-for="val in [80, 100, 125, 150, 175]"
               :key="val"
               class="rounded-lg border px-3 py-1.5 text-sm transition"
               :class="
@@ -313,6 +281,38 @@ async function handleImportFile(event: Event) {
             >
               {{ val }}%
             </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-hint" for="animations-switch">{{
+            t("settings.animations")
+          }}</label>
+          <p class="text-xs text-muted-foreground">
+            {{ t("settings.animationsHint") }}
+          </p>
+          <div class="mt-2 inline-flex items-center gap-3">
+            <button
+              id="animations-switch"
+              role="switch"
+              :aria-checked="animationsEnabled"
+              class="relative h-6 w-11 rounded-full transition focus:outline-none focus:ring-2 focus:ring-primary/50"
+              :class="
+                animationsEnabled ? 'bg-primary' : 'bg-muted-foreground/30'
+              "
+              @click="
+                animationsEnabled = !animationsEnabled;
+                handleSave();
+              "
+            >
+              <span
+                class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-background shadow-sm transition-transform"
+                :class="animationsEnabled ? 'translate-x-5' : 'translate-x-0'"
+              />
+            </button>
+            <span class="text-sm text-foreground">{{
+              animationsEnabled ? t("common.on") : t("common.off")
+            }}</span>
           </div>
         </div>
       </section>

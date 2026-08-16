@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import {
   IconPlus,
   IconLayoutKanban,
@@ -9,10 +9,12 @@ import {
   IconRefresh,
   IconChevronDown,
   IconChevronRight,
+  IconChevronLeft,
 } from "@tabler/icons-vue";
 import { useI18n } from "@/composables/useI18n";
 import { useSettings } from "@/composables/useSettings";
 import { useRefreshCountdown } from "@/composables/useRefreshCountdown";
+import { readSidebarCollapsed, writeSidebarCollapsed } from "@/lib/settings";
 import type { Project } from "@/lib/types";
 import Form from "@/components/Form.vue";
 
@@ -43,6 +45,9 @@ const memberProjects = computed(() =>
 );
 const showOwned = ref(true);
 const showMember = ref(true);
+const collapsed = ref(readSidebarCollapsed());
+
+watch(collapsed, writeSidebarCollapsed);
 
 const showCreateForm = ref(false);
 const newProjectName = ref("");
@@ -93,14 +98,24 @@ function confirmDelete() {
     deleteTarget.value = null;
   }
 }
+
+function projectInitials(name: string): string {
+  return name.slice(0, 2).toUpperCase();
+}
 </script>
 
 <template>
   <aside
-    class="flex w-60 shrink-0 flex-col border-r border-foreground/10 bg-muted/20"
+    class="relative flex shrink-0 flex-col border-r border-foreground/10 bg-muted/20 transition-[width] duration-300"
+    :class="collapsed ? 'w-12' : 'w-60'"
   >
-    <div class="flex items-center justify-between px-3 py-2.5">
+    <!-- Header -->
+    <div
+      class="flex items-center px-3 py-2.5"
+      :class="collapsed ? 'justify-center' : 'justify-between'"
+    >
       <span
+        v-if="!collapsed"
         class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
       >
         {{ t("sidebar.projects") }}
@@ -117,96 +132,188 @@ function confirmDelete() {
 
     <!-- Project list -->
     <div class="flex-1 overflow-y-auto px-2">
-      <div v-if="loading" class="px-2 py-3 text-xs text-muted-foreground">
+      <div
+        v-if="loading"
+        v-show="!collapsed"
+        class="px-2 py-3 text-xs text-muted-foreground"
+      >
         {{ t("breadcrumbs.loading") }}
       </div>
 
       <template v-if="!loading">
-        <!-- Owned projects subgroup -->
-        <div v-if="ownedProjects.length > 0">
+        <!-- Flat list for local organization -->
+        <template v-if="!isRemote">
+          <div class="mt-1.5" />
           <button
-            class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
-            @click="showOwned = !showOwned"
+            v-for="p in projects"
+            :key="p.id"
+            class="group flex w-full items-center rounded-lg py-2 text-sm transition"
+            :class="[
+              selectedProject === p.slug
+                ? collapsed
+                  ? 'font-medium text-primary'
+                  : 'bg-primary/10 font-medium text-primary'
+                : 'text-foreground/70 hover:bg-muted',
+              collapsed ? 'justify-center px-0' : 'gap-2 px-2.5',
+            ]"
+            :title="collapsed ? p.name : undefined"
+            @click="emit('select', p.slug)"
           >
-            <IconChevronDown v-if="showOwned" :size="13" class="shrink-0" />
-            <IconChevronRight v-else :size="13" class="shrink-0" />
-            {{ t("sidebar.ownedProjects") }}
-            <span class="ml-auto text-[10px] font-normal opacity-60">{{
-              ownedProjects.length
-            }}</span>
-          </button>
-          <template v-if="showOwned">
-            <button
-              v-for="p in ownedProjects"
-              :key="p.id"
-              class="group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition"
+            <span
+              v-if="collapsed"
+              class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-center text-xs font-bold leading-none pb-px"
               :class="
                 selectedProject === p.slug
-                  ? 'bg-primary/10 font-medium text-primary'
-                  : 'text-foreground/70 hover:bg-muted'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-primary/15 text-primary'
               "
-              @click="emit('select', p.slug)"
+              >{{ projectInitials(p.name) }}</span
             >
-              <IconLayoutKanban :size="15" class="shrink-0" />
-              <span class="flex-1 truncate text-left">{{ p.name }}</span>
-              <IconPencil
-                v-if="canCreate"
-                :size="13"
-                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-                @click="(e) => startEdit(e, p)"
-              />
-              <IconTrash
-                v-if="canCreate"
-                :size="13"
-                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                @click="(e) => handleDelete(e, p)"
-              />
-            </button>
-          </template>
-        </div>
+            <IconLayoutKanban v-else :size="15" class="shrink-0" />
+            <span v-if="!collapsed" class="flex-1 truncate text-left">{{
+              p.name
+            }}</span>
+            <IconPencil
+              v-if="canCreate && !collapsed"
+              :size="13"
+              class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+              @click="(e) => startEdit(e, p)"
+            />
+            <IconTrash
+              v-if="canCreate && !collapsed"
+              :size="13"
+              class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+              @click="(e) => handleDelete(e, p)"
+            />
+          </button>
+        </template>
 
-        <!-- Member projects subgroup -->
-        <div v-if="memberProjects.length > 0">
-          <button
-            class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
-            @click="showMember = !showMember"
-          >
-            <IconChevronDown v-if="showMember" :size="13" class="shrink-0" />
-            <IconChevronRight v-else :size="13" class="shrink-0" />
-            {{ t("sidebar.memberProjects") }}
-            <span class="ml-auto text-[10px] font-normal opacity-60">{{
-              memberProjects.length
-            }}</span>
-          </button>
-          <template v-if="showMember">
+        <!-- Subgroups for remote organization -->
+        <template v-else>
+          <!-- Owned projects subgroup -->
+          <div v-if="ownedProjects.length > 0">
+            <hr v-if="collapsed" class="my-1.5 border-foreground/10" />
             <button
-              v-for="p in memberProjects"
-              :key="p.id"
-              class="group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition"
-              :class="
-                selectedProject === p.slug
-                  ? 'bg-primary/10 font-medium text-primary'
-                  : 'text-foreground/70 hover:bg-muted'
-              "
-              @click="emit('select', p.slug)"
+              v-else
+              class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+              @click="showOwned = !showOwned"
             >
-              <IconLayoutKanban :size="15" class="shrink-0" />
-              <span class="flex-1 truncate text-left">{{ p.name }}</span>
-              <IconPencil
-                v-if="canCreate"
-                :size="13"
-                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-                @click="(e) => startEdit(e, p)"
-              />
-              <IconTrash
-                v-if="canCreate"
-                :size="13"
-                class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                @click="(e) => handleDelete(e, p)"
-              />
+              <IconChevronDown v-if="showOwned" :size="13" class="shrink-0" />
+              <IconChevronRight v-else :size="13" class="shrink-0" />
+              {{ t("sidebar.ownedProjects") }}
+              <span class="ml-auto text-[10px] font-normal opacity-60">{{
+                ownedProjects.length
+              }}</span>
             </button>
-          </template>
-        </div>
+            <template v-if="showOwned || collapsed">
+              <button
+                v-for="p in ownedProjects"
+                :key="p.id"
+                class="group flex w-full items-center rounded-lg py-2 text-sm transition"
+                :class="[
+                  selectedProject === p.slug
+                    ? collapsed
+                      ? 'font-medium text-primary'
+                      : 'bg-primary/10 font-medium text-primary'
+                    : 'text-foreground/70 hover:bg-muted',
+                  collapsed ? 'justify-center px-0' : 'gap-2 px-2.5',
+                ]"
+                :title="collapsed ? p.name : undefined"
+                @click="emit('select', p.slug)"
+              >
+                <span
+                  v-if="collapsed"
+                  class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-center text-xs font-bold leading-none pb-px"
+                  :class="
+                    selectedProject === p.slug
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-primary/15 text-primary'
+                  "
+                >
+                  {{ projectInitials(p.name) }}
+                </span>
+                <IconLayoutKanban v-else :size="15" class="shrink-0" />
+                <span v-if="!collapsed" class="flex-1 truncate text-left">{{
+                  p.name
+                }}</span>
+                <IconPencil
+                  v-if="canCreate && !collapsed"
+                  :size="13"
+                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+                  @click="(e) => startEdit(e, p)"
+                />
+                <IconTrash
+                  v-if="canCreate && !collapsed"
+                  :size="13"
+                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                  @click="(e) => handleDelete(e, p)"
+                />
+              </button>
+            </template>
+          </div>
+
+          <!-- Member projects subgroup -->
+          <div v-if="memberProjects.length > 0">
+            <hr v-if="collapsed" class="my-1.5 border-foreground/10" />
+            <button
+              v-else
+              class="flex w-full items-center gap-1 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition hover:text-foreground"
+              @click="showMember = !showMember"
+            >
+              <IconChevronDown v-if="showMember" :size="13" class="shrink-0" />
+              <IconChevronRight v-else :size="13" class="shrink-0" />
+              {{ t("sidebar.memberProjects") }}
+              <span class="ml-auto text-[10px] font-normal opacity-60">{{
+                memberProjects.length
+              }}</span>
+            </button>
+            <template v-if="showMember || collapsed">
+              <button
+                v-for="p in memberProjects"
+                :key="p.id"
+                class="group flex w-full items-center rounded-lg py-2 text-sm transition"
+                :class="[
+                  selectedProject === p.slug
+                    ? collapsed
+                      ? 'font-medium text-primary'
+                      : 'bg-primary/10 font-medium text-primary'
+                    : 'text-foreground/70 hover:bg-muted',
+                  collapsed ? 'justify-center px-0' : 'gap-2 px-2.5',
+                ]"
+                :title="collapsed ? p.name : undefined"
+                @click="emit('select', p.slug)"
+              >
+                <span
+                  v-if="collapsed"
+                  class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-center text-xs font-bold leading-none pb-px"
+                  :class="
+                    selectedProject === p.slug
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-primary/15 text-primary'
+                  "
+                >
+                  {{ projectInitials(p.name) }}
+                </span>
+                <IconLayoutKanban v-else :size="15" class="shrink-0" />
+                <span v-if="!collapsed" class="flex-1 truncate text-left">{{
+                  p.name
+                }}</span>
+                <IconPencil
+                  v-if="canCreate && !collapsed"
+                  :size="13"
+                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
+                  @click="(e) => startEdit(e, p)"
+                />
+                <IconTrash
+                  v-if="canCreate && !collapsed"
+                  :size="13"
+                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                  @click="(e) => handleDelete(e, p)"
+                />
+              </button>
+            </template>
+          </div>
+        </template>
 
         <div
           v-if="projects.length === 0"
@@ -215,15 +322,6 @@ function confirmDelete() {
           {{ t("sidebar.noProjects") }}
         </div>
       </template>
-    </div>
-
-    <!-- Auto-refresh countdown -->
-    <div
-      v-if="isRemote && settings.autoRefreshEnabled && nextRefreshIn > 0"
-      class="flex items-center gap-1.5 border-t border-foreground/10 px-3 py-2 text-xs text-muted-foreground"
-    >
-      <IconRefresh :size="12" class="shrink-0" />
-      <span>{{ t("settings.nextRefreshIn") }} {{ nextRefreshIn }}s</span>
     </div>
 
     <!-- Create project modal -->
@@ -351,6 +449,20 @@ function confirmDelete() {
         </div>
       </template>
     </Form>
+
+    <!-- Collapse toggle button -->
+    <button
+      type="button"
+      class="absolute top-1/2 -right-3.5 z-30 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-foreground/10 bg-background text-foreground shadow-md transition-colors duration-300 hover:bg-muted"
+      :aria-label="collapsed ? t('sidebar.expand') : t('sidebar.collapse')"
+      @click="collapsed = !collapsed"
+    >
+      <IconChevronLeft
+        :size="14"
+        class="transition-transform duration-300"
+        :class="collapsed ? 'rotate-180' : 'rotate-0'"
+      />
+    </button>
   </aside>
 </template>
 
