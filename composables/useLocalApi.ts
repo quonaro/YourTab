@@ -113,6 +113,16 @@ export function useLocalApi() {
     return db.createBoard(project.id, name, existing.length);
   }
 
+  async function updateBoard(
+    projectSlug: string,
+    boardId: number,
+    name: string,
+  ): Promise<Board> {
+    const project = await db.getProjectBySlug(projectSlug);
+    if (!project) throw new Error("Project not found");
+    return db.updateBoard(boardId, name);
+  }
+
   async function deleteBoard(projectSlug: string, boardId: number): Promise<void> {
     const project = await db.getProjectBySlug(projectSlug);
     if (!project) throw new Error("Project not found");
@@ -140,6 +150,7 @@ export function useLocalApi() {
     createTask,
     getBoards,
     createBoard,
+    updateBoard,
     deleteBoard,
     seedIfEmpty,
   };

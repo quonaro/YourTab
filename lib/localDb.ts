@@ -1,4 +1,5 @@
 import type { Task, TaskStatus, Project, Board, TaskListResponse } from "./types";
+import { readSettings, writeSettings, type ExtensionSettings } from "./settings";
 
 const DB_NAME = "yourtask-local";
 const DB_VERSION = 2;
@@ -407,6 +408,30 @@ export async function ensureDefaultBoard(projectId: number): Promise<void> {
   await createBoard(projectId, "Основная доска", 0);
 }
 
+export async function updateBoard(
+  id: number,
+  name: string,
+): Promise<Board> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("boards", "readwrite");
+    const req = transaction.objectStore("boards").get(id);
+    req.onsuccess = () => {
+      const existing = req.result as (Board & { projectId: number }) | undefined;
+      if (!existing) {
+        reject(new Error("Board not found"));
+        return;
+      }
+      const updated = { ...existing, name };
+      transaction.objectStore("boards").put(updated);
+      transaction.oncomplete = () => {
+        resolve({ id: updated.id, name: updated.name, position: updated.position });
+      };
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function deleteBoard(id: number): Promise<void> {
   await tx("boards", "readwrite", (s) => s.delete(id));
 }
@@ -419,4 +444,103 @@ export async function seedDefaultData(): Promise<void> {
 
   const _project = await createProject("My First Project", "Default local project");
   // createProject already creates default statuses and a board
+}
+
+// ─── Export / Import ───
+
+const EXPORT_VERSION = 1;
+const ALL_STORES = ["projects", "statuses", "tasks", "boards", "meta"] as const;
+
+export interface ExportData {
+  version: number;
+  exportedAt: string;
+  settings: ExtensionSettings;
+  database: Record<string, unknown[]>;
+}
+
+function getAllFromStore(db: IDBDatabase, store: string): Promise<unknown[]> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, "readonly");
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result ?? []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function clearStore(db: IDBDatabase, store: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    const req = tx.objectStore(store).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function putAllToStore(db: IDBDatabase, store: string, records: unknown[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    const os = tx.objectStore(store);
+    for (const record of records) {
+      os.put(record);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function exportAllData(): Promise<ExportData> {
+  const db = await openDB();
+  const database: Record<string, unknown[]> = {};
+
+  for (const store of ALL_STORES) {
+    if (db.objectStoreNames.contains(store)) {
+      database[store] = await getAllFromStore(db, store);
+    }
+  }
+
+  return {
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings: readSettings(),
+    database,
+  };
+}
+
+export async function importAllData(data: ExportData): Promise<void> {
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid import data");
+  }
+  if (data.version !== EXPORT_VERSION) {
+    throw new Error(`Unsupported export version: ${data.version}`);
+  }
+
+  const db = await openDB();
+
+  // Clear and restore each store
+  for (const store of ALL_STORES) {
+    if (!db.objectStoreNames.contains(store)) continue;
+    await clearStore(db, store);
+    const records = data.database?.[store];
+    if (Array.isArray(records) && records.length > 0) {
+      await putAllToStore(db, store, records);
+    }
+  }
+
+  // Restore settings
+  if (data.settings) {
+    writeSettings(data.settings);
+  }
+}
+
+export function downloadExportData(data: ExportData): void {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `yourtask-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

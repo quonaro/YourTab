@@ -5,6 +5,15 @@ declare module "wxt/browser" {
   export type PublicPath =
     | "/"
     | "/background.js"
+    | "/fonts/stetica/black.otf"
+    | "/fonts/stetica/bold-italic.otf"
+    | "/fonts/stetica/bold.otf"
+    | "/fonts/stetica/italic.otf"
+    | "/fonts/stetica/light-italic.otf"
+    | "/fonts/stetica/light.otf"
+    | "/fonts/stetica/medium-italic.otf"
+    | "/fonts/stetica/medium.otf"
+    | "/fonts/stetica/regular.otf"
     | "/newtab.html"
     | "/options.html"
   type HtmlPublicPath = Extract<PublicPath, `${string}.html`>

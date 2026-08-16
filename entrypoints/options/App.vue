@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { IconDownload, IconUpload, IconLoader2 } from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
 import type { Language } from "@/lib/settings";
+import {
+  exportAllData,
+  importAllData,
+  downloadExportData,
+  type ExportData,
+} from "@/lib/localDb";
 
 const { t } = useI18n();
 const { settings, saveSettings } = useSettings();
@@ -42,6 +49,49 @@ function handleSave() {
   setLanguage(language.value);
   saved.value = true;
   setTimeout(() => (saved.value = false), 2000);
+}
+
+const importLoading = ref(false);
+const importMessage = ref("");
+const fileInput = ref<HTMLInputElement | null>(null);
+
+async function handleExport() {
+  try {
+    const data = await exportAllData();
+    downloadExportData(data);
+  } catch {
+    importMessage.value = t("settings.exportError");
+    setTimeout(() => (importMessage.value = ""), 3000);
+  }
+}
+
+function triggerImport() {
+  fileInput.value?.click();
+}
+
+async function handleImportFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  if (!confirm(t("settings.importConfirm"))) {
+    input.value = "";
+    return;
+  }
+
+  importLoading.value = true;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text) as ExportData;
+    await importAllData(data);
+    importMessage.value = t("settings.importSuccess");
+    setTimeout(() => location.reload(), 1500);
+  } catch {
+    importLoading.value = false;
+    importMessage.value = t("settings.importError");
+    setTimeout(() => (importMessage.value = ""), 3000);
+  }
+  input.value = "";
 }
 </script>
 
@@ -140,6 +190,39 @@ function handleSave() {
             t("options.saved")
           }}</span>
         </div>
+      </div>
+
+      <div class="card-base space-y-4">
+        <h2 class="form-label">{{ t("settings.dataManagement") }}</h2>
+        <p class="form-hint">{{ t("settings.exportDataHint") }}</p>
+        <div class="flex gap-3">
+          <button class="btn-primary" @click="handleExport">
+            <IconDownload :size="16" />
+            {{ t("settings.exportData") }}
+          </button>
+          <button
+            class="btn-primary"
+            :disabled="importLoading"
+            @click="triggerImport"
+          >
+            <IconLoader2 v-if="importLoading" :size="16" class="animate-spin" />
+            <IconUpload v-else :size="16" />
+            {{ t("settings.importData") }}
+          </button>
+        </div>
+        <p
+          v-if="importMessage"
+          class="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary"
+        >
+          {{ importMessage }}
+        </p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="hidden"
+          @change="handleImportFile"
+        />
       </div>
     </div>
   </div>

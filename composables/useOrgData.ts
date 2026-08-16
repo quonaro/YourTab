@@ -105,6 +105,11 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     throw new Error("Remote board creation not implemented");
   }
 
+  async function updateBoard(projectSlug: string, boardId: number, name: string): Promise<Board> {
+    if (isLocal.value) return localApi.updateBoard(projectSlug, boardId, name);
+    throw new Error("Remote board update not implemented");
+  }
+
   async function deleteBoard(projectSlug: string, boardId: number): Promise<void> {
     if (isLocal.value) return localApi.deleteBoard(projectSlug, boardId);
     throw new Error("Remote board deletion not implemented");
@@ -167,6 +172,7 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     getProjectTags,
     getProjectSprints,
     createBoard,
+    updateBoard,
     deleteBoard,
     dragTask,
     reorderTasks,

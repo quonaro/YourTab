@@ -5,8 +5,15 @@ import {
   IconLogin,
   IconLogout,
   IconLoader2,
-  IconServer,
+  IconDownload,
+  IconUpload,
 } from "@tabler/icons-vue";
+import {
+  exportAllData,
+  importAllData,
+  downloadExportData,
+  type ExportData,
+} from "@/lib/localDb";
 import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
@@ -84,6 +91,49 @@ function handleDisconnect() {
 function close() {
   open.value = false;
 }
+
+const importLoading = ref(false);
+const importMessage = ref("");
+const fileInput = ref<HTMLInputElement | null>(null);
+
+async function handleExport() {
+  try {
+    const data = await exportAllData();
+    downloadExportData(data);
+  } catch {
+    importMessage.value = t("settings.exportError");
+    setTimeout(() => (importMessage.value = ""), 3000);
+  }
+}
+
+function triggerImport() {
+  fileInput.value?.click();
+}
+
+async function handleImportFile(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  if (!confirm(t("settings.importConfirm"))) {
+    input.value = "";
+    return;
+  }
+
+  importLoading.value = true;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text) as ExportData;
+    await importAllData(data);
+    importMessage.value = t("settings.importSuccess");
+    setTimeout(() => location.reload(), 1500);
+  } catch {
+    importLoading.value = false;
+    importMessage.value = t("settings.importError");
+    setTimeout(() => (importMessage.value = ""), 3000);
+  }
+  input.value = "";
+}
 </script>
 
 <template>
@@ -114,8 +164,7 @@ function close() {
     <div class="flex-1 space-y-6 overflow-y-auto p-4">
       <!-- Server connection -->
       <section class="space-y-3">
-        <h3 class="form-label flex items-center gap-1.5">
-          <IconServer :size="14" />
+        <h3 class="form-label">
           {{ t("settings.serverConnection") }}
         </h3>
 
@@ -266,6 +315,42 @@ function close() {
             </button>
           </div>
         </div>
+      </section>
+
+      <hr class="border-foreground/10" />
+
+      <!-- Data export/import -->
+      <section class="space-y-3">
+        <h3 class="form-label">{{ t("settings.dataManagement") }}</h3>
+        <div class="flex gap-2">
+          <button class="btn-small flex-1" @click="handleExport">
+            <IconDownload :size="14" />
+            {{ t("settings.exportData") }}
+          </button>
+          <button
+            class="btn-small flex-1"
+            :disabled="importLoading"
+            @click="triggerImport"
+          >
+            <IconLoader2 v-if="importLoading" :size="14" class="animate-spin" />
+            <IconUpload v-else :size="14" />
+            {{ t("settings.importData") }}
+          </button>
+        </div>
+        <p class="form-hint">{{ t("settings.exportDataHint") }}</p>
+        <p
+          v-if="importMessage"
+          class="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary"
+        >
+          {{ importMessage }}
+        </p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="hidden"
+          @change="handleImportFile"
+        />
       </section>
 
       <div class="flex items-center gap-2 pt-2">

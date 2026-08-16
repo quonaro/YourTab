@@ -12,6 +12,11 @@ export default defineConfig({
       newtab: "newtab.html",
     },
     options_page: "options.html",
+    browser_specific_settings: {
+      gecko: {
+        id: "yourtab@yourtask.app",
+      },
+    },
   },
   vite: () => ({
     plugins: [vue()],

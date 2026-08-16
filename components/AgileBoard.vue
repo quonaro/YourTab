@@ -17,6 +17,7 @@ import {
   IconSearch,
   IconAdjustmentsHorizontal,
   IconArchive,
+  IconDotsVertical,
 } from "@tabler/icons-vue";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
 import { useWebSocket, type WSMessage } from "@/composables/useWebSocket";
@@ -70,6 +71,7 @@ const {
   getProjectTags,
   getProjectSprints,
   createBoard,
+  updateBoard,
   deleteBoard,
 } = useOrgData(orgTypeRef, orgSlugRef);
 
@@ -445,6 +447,10 @@ const statusActionsOpen = ref<number | null>(null);
 // ─── Board CRUD UI ───
 const showCreateBoard = ref(false);
 const newBoardName = ref("");
+const boardActionsOpen = ref<number | null>(null);
+const editBoardTarget = ref<Board | null>(null);
+const editBoardName = ref("");
+const deleteBoardTarget = ref<Board | null>(null);
 
 function closeStatusMenuIfOutside(e: MouseEvent) {
   if (statusActionsOpen.value === null) return;
@@ -455,6 +461,18 @@ function closeStatusMenuIfOutside(e: MouseEvent) {
   if (!menu || !trigger) return;
   if (!menu.contains(target) && !trigger.contains(target)) {
     statusActionsOpen.value = null;
+  }
+}
+
+function closeBoardMenuIfOutside(e: MouseEvent) {
+  if (boardActionsOpen.value === null) return;
+  const target = e.target as HTMLElement;
+  const id = boardActionsOpen.value;
+  const menu = document.querySelector(`[data-board-menu="${id}"]`);
+  const trigger = document.querySelector(`[data-board-trigger="${id}"]`);
+  if (!menu || !trigger) return;
+  if (!menu.contains(target) && !trigger.contains(target)) {
+    boardActionsOpen.value = null;
   }
 }
 
@@ -572,6 +590,7 @@ const rows = computed(() =>
   boards.value.map((b) => ({
     id: b.id,
     name: b.name,
+    board: b,
     tasks: displayTasks.value.filter((t) => t.boardId === b.id),
   })),
 );
@@ -600,6 +619,7 @@ async function loadData() {
 onMounted(() => {
   loadData();
   document.addEventListener("click", closeStatusMenuIfOutside, true);
+  document.addEventListener("click", closeBoardMenuIfOutside, true);
   if (isRemote.value) {
     wsConnect();
     wsUnsub = wsOnMessage(handleWSMessage);
@@ -608,6 +628,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", closeStatusMenuIfOutside, true);
+  document.removeEventListener("click", closeBoardMenuIfOutside, true);
   if (wsUnsub) {
     wsUnsub();
     wsUnsub = null;
@@ -1115,13 +1136,54 @@ async function handleCreateBoard() {
   }
 }
 
-async function handleDeleteBoard(boardId: number) {
+function startEditBoard(board: Board) {
+  editBoardTarget.value = board;
+  editBoardName.value = board.name;
+  boardActionsOpen.value = null;
+}
+
+function cancelEditBoard() {
+  editBoardTarget.value = null;
+  editBoardName.value = "";
+}
+
+async function handleUpdateBoard() {
+  if (!editBoardTarget.value || !editBoardName.value.trim()) return;
   if (props.readOnly) {
     error.value = t("board.readOnlyError");
     return;
   }
   try {
-    await deleteBoard(props.projectSlug, boardId);
+    await updateBoard(
+      props.projectSlug,
+      editBoardTarget.value.id,
+      editBoardName.value.trim(),
+    );
+    cancelEditBoard();
+    await loadData();
+  } catch (e) {
+    error.value = mapApiError(e, t);
+  }
+}
+
+function startDeleteBoard(board: Board) {
+  deleteBoardTarget.value = board;
+  boardActionsOpen.value = null;
+}
+
+function cancelDeleteBoard() {
+  deleteBoardTarget.value = null;
+}
+
+async function handleDeleteBoardConfirm() {
+  if (!deleteBoardTarget.value) return;
+  if (props.readOnly) {
+    error.value = t("board.readOnlyError");
+    return;
+  }
+  try {
+    await deleteBoard(props.projectSlug, deleteBoardTarget.value.id);
+    deleteBoardTarget.value = null;
     await loadData();
   } catch (e) {
     error.value = mapApiError(e, t);
@@ -1329,30 +1391,33 @@ async function handleDeleteBoard(boardId: number) {
             <button
               v-if="!readOnly && !isRemote"
               :data-status-trigger="status.id"
+              draggable="false"
               class="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-              @click="
+              @mousedown.prevent.stop
+              @click.stop="
                 statusActionsOpen =
                   statusActionsOpen === status.id ? null : status.id
               "
             >
-              <IconPencil :size="13" />
+              <IconDotsVertical :size="14" />
             </button>
             <!-- Status actions dropdown -->
             <div
               v-if="statusActionsOpen === status.id"
               :data-status-menu="status.id"
+              draggable="false"
               class="dropdown-panel absolute right-0 top-full z-20 mt-1 w-44 p-2"
             >
               <button
                 class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
-                @click="startEditStatus(status)"
+                @click.stop="startEditStatus(status)"
               >
                 <IconPencil :size="13" />
                 {{ t("board.editStatus") }}
               </button>
               <button
                 class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
-                @click="startDeleteStatus(status)"
+                @click.stop="startDeleteStatus(status)"
               >
                 <IconTrash :size="13" />
                 {{ t("board.deleteStatus") }}
@@ -1517,8 +1582,9 @@ async function handleDeleteBoard(boardId: number) {
             class="agile-scroll agile-row-scroll overflow-x-auto"
             @scroll="syncScrollFrom($event.target as HTMLElement)"
           >
-            <button
-              type="button"
+            <div
+              role="button"
+              tabindex="0"
               class="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-left transition hover:bg-muted/70"
               :class="!readOnly ? 'cursor-grab active:cursor-grabbing' : ''"
               :style="{ width: `${orderedStatuses.length * COLUMN_WIDTH}px` }"
@@ -1526,6 +1592,7 @@ async function handleDeleteBoard(boardId: number) {
               @dragstart="onBoardDragStart(row.id)"
               @dragend="onBoardDragEnd"
               @click="toggleBoard(row.id)"
+              @keydown.enter="toggleBoard(row.id)"
             >
               <IconGripVertical
                 v-if="!readOnly"
@@ -1545,13 +1612,39 @@ async function handleDeleteBoard(boardId: number) {
               </span>
               <button
                 v-if="!readOnly && orgType === 'local'"
-                class="shrink-0 rounded p-1 text-muted-foreground/40 transition hover:bg-destructive/10 hover:text-destructive"
-                :title="t('board.deleteBoard')"
-                @click.stop="handleDeleteBoard(row.id)"
+                :data-board-trigger="row.id"
+                draggable="false"
+                class="relative shrink-0 rounded p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
+                @mousedown.prevent.stop
+                @click.stop="
+                  boardActionsOpen = boardActionsOpen === row.id ? null : row.id
+                "
               >
-                <IconTrash :size="13" />
+                <IconDotsVertical :size="14" />
               </button>
-            </button>
+              <!-- Board actions dropdown -->
+              <div
+                v-if="boardActionsOpen === row.id"
+                :data-board-menu="row.id"
+                draggable="false"
+                class="dropdown-panel absolute right-0 top-full z-20 mt-1 w-44 p-2"
+              >
+                <button
+                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
+                  @click.stop="startEditBoard(row.board)"
+                >
+                  <IconPencil :size="13" />
+                  {{ t("board.editBoard") }}
+                </button>
+                <button
+                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
+                  @click.stop="startDeleteBoard(row.board)"
+                >
+                  <IconTrash :size="13" />
+                  {{ t("board.deleteBoard") }}
+                </button>
+              </div>
+            </div>
           </div>
           <!-- Board cells -->
           <div
@@ -1839,6 +1932,78 @@ async function handleDeleteBoard(boardId: number) {
     <template #submit>
       <div class="flex justify-end gap-2">
         <button type="button" class="btn-small" @click="cancelDeleteStatus">
+          {{ t("board.cancel") }}
+        </button>
+        <button
+          type="submit"
+          class="btn-small bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        >
+          {{ t("board.delete") }}
+        </button>
+      </div>
+    </template>
+  </Form>
+
+  <!-- Edit board modal -->
+  <Form
+    as="modal"
+    :open="!!editBoardTarget"
+    @update:open="
+      (v) => {
+        if (!v) cancelEditBoard();
+      }
+    "
+    @submit="handleUpdateBoard"
+  >
+    <template #header>
+      <h2 class="text-sm font-semibold">{{ t("board.editBoard") }}</h2>
+    </template>
+    <div class="space-y-3">
+      <div>
+        <label class="form-hint">{{ t("board.boardName") }}</label>
+        <input v-model="editBoardName" class="input-base mt-1 text-sm" />
+      </div>
+    </div>
+    <template #submit>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn-small" @click="cancelEditBoard">
+          {{ t("board.cancel") }}
+        </button>
+        <button
+          type="submit"
+          class="btn-primary btn-small"
+          :disabled="!editBoardName.trim()"
+        >
+          {{ t("board.save") }}
+        </button>
+      </div>
+    </template>
+  </Form>
+
+  <!-- Delete board modal -->
+  <Form
+    as="modal"
+    destructive
+    :open="!!deleteBoardTarget"
+    @update:open="
+      (v) => {
+        if (!v) cancelDeleteBoard();
+      }
+    "
+    @submit="handleDeleteBoardConfirm"
+  >
+    <template #header>
+      <div class="flex items-center gap-2">
+        <IconAlertTriangle :size="18" class="text-destructive" />
+        <h2 class="text-sm font-semibold">{{ t("board.deleteBoard") }}</h2>
+      </div>
+    </template>
+    <p class="text-sm text-muted-foreground">
+      {{ t("board.deleteBoardConfirm") }}
+    </p>
+    <template #submit>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn-small" @click="cancelDeleteBoard">
           {{ t("board.cancel") }}
         </button>
         <button
