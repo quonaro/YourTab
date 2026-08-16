@@ -189,7 +189,9 @@ export function useBoardDragDrop(opts: UseBoardDragDropOptions) {
 
     const targetCellTasks = opts.tasks.value.filter(
       (tk) =>
-        tk.status?.id === statusId && tk.boardId === boardId && tk.id !== taskId,
+        tk.status?.id === statusId &&
+        tk.boardId === boardId &&
+        tk.id !== taskId,
     );
     const filtered = targetCellTasks.map((tk) => tk.id);
 
@@ -258,10 +260,7 @@ export function useBoardDragDrop(opts: UseBoardDragDropOptions) {
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
   }
-  function onStatusDrop(
-    e: DragEvent,
-    columnOrder: Ref<number[]>,
-  ) {
+  function onStatusDrop(e: DragEvent, columnOrder: Ref<number[]>) {
     if (draggedStatusId.value === null) return;
     e.preventDefault();
     const targetEl = e.currentTarget as HTMLElement;

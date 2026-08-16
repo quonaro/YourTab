@@ -38,8 +38,10 @@ export default {
     newTask: "Новая задача...",
     addTask: "Добавить задачу",
     dismiss: "Закрыть",
-    readOnlyBanner: "Организация в режиме только чтения. Создание и редактирование задач отключены.",
-    readOnlyError: "Организация в режиме только чтения. Запись операций отключена.",
+    readOnlyBanner:
+      "Организация в режиме только чтения. Создание и редактирование задач отключены.",
+    readOnlyError:
+      "Организация в режиме только чтения. Запись операций отключена.",
     agileNotAvailable: "Agile-доски недоступны на тарифе этой организации.",
     addStatus: "Добавить статус",
     addBoard: "Добавить доску",
@@ -123,7 +125,8 @@ export default {
     title: "Настройки расширения YourTask",
     apiDomain: "API домен",
     apiDomainPlaceholder: "https://yourtask.example.com",
-    apiDomainHint: "Домен для self-hosted экземпляров YourTask. Оставьте пустым для значения по умолчанию.",
+    apiDomainHint:
+      "Домен для self-hosted экземпляров YourTask. Оставьте пустым для значения по умолчанию.",
     theme: "Тема",
     accentColor: "Акцентный цвет",
     language: "Язык",
@@ -162,7 +165,8 @@ export default {
     create: "Создать",
     noProjects: "Пока нет проектов",
     deleteConfirmTitle: "Удалить проект?",
-    deleteConfirmText: "Вы уверены, что хотите удалить этот проект? Все задачи будут удалены безвозвратно.",
+    deleteConfirmText:
+      "Вы уверены, что хотите удалить этот проект? Все задачи будут удалены безвозвратно.",
     deleteConfirmButton: "Удалить",
     deleteCancelButton: "Отмена",
     editProject: "Изменить проект",

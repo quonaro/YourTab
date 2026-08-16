@@ -78,24 +78,32 @@ export function useBoardData(opts: UseBoardDataOptions) {
       const sortedStatuses = statusList.sort((a, b) => a.position - b.position);
       if (
         sortedStatuses.length !== opts.statuses.value.length ||
-        sortedStatuses.some(
-          (s, i) => {
-            const o = opts.statuses.value[i];
-            return !o || o.id !== s.id || o.name !== s.name || o.color !== s.color || o.isEnd !== s.isEnd || o.position !== s.position;
-          },
-        )
+        sortedStatuses.some((s, i) => {
+          const o = opts.statuses.value[i];
+          return (
+            !o ||
+            o.id !== s.id ||
+            o.name !== s.name ||
+            o.color !== s.color ||
+            o.isEnd !== s.isEnd ||
+            o.position !== s.position
+          );
+        })
       ) {
         opts.statuses.value = sortedStatuses;
       }
 
       if (
         boardList.length !== opts.boards.value.length ||
-        boardList.some(
-          (b, i) => {
-            const o = opts.boards.value[i];
-            return !o || o.id !== b.id || o.name !== b.name || o.position !== b.position;
-          },
-        )
+        boardList.some((b, i) => {
+          const o = opts.boards.value[i];
+          return (
+            !o ||
+            o.id !== b.id ||
+            o.name !== b.name ||
+            o.position !== b.position
+          );
+        })
       ) {
         opts.boards.value = boardList;
       }
@@ -142,9 +150,7 @@ export function useBoardData(opts: UseBoardDataOptions) {
           taskIds: number[];
         };
         const sid = statusId ?? null;
-        const taskMap = new Map(
-          opts.tasks.value.map((tk) => [tk.id, tk]),
-        );
+        const taskMap = new Map(opts.tasks.value.map((tk) => [tk.id, tk]));
         const statusObj =
           sid != null
             ? (opts.statuses.value.find((s) => s.id === sid) ?? null)
@@ -160,10 +166,7 @@ export function useBoardData(opts: UseBoardDataOptions) {
             reorderedPart.push({
               ...task,
               order: i,
-              status:
-                sid != null
-                  ? (statusObj as Task["status"])
-                  : task.status,
+              status: sid != null ? (statusObj as Task["status"]) : task.status,
             });
           }
         }

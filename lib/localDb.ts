@@ -1,5 +1,15 @@
-import type { Task, TaskStatus, Project, Board, TaskListResponse } from "./types";
-import { readSettings, writeSettings, type ExtensionSettings } from "./settings";
+import type {
+  Task,
+  TaskStatus,
+  Project,
+  Board,
+  TaskListResponse,
+} from "./types";
+import {
+  readSettings,
+  writeSettings,
+  type ExtensionSettings,
+} from "./settings";
 
 const DB_NAME = "yourtask-local";
 const DB_VERSION = 2;
@@ -13,20 +23,32 @@ function openDB(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains("projects")) {
-        const store = db.createObjectStore("projects", { keyPath: "id", autoIncrement: true });
+        const store = db.createObjectStore("projects", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
         store.createIndex("slug", "slug", { unique: true });
       }
       if (!db.objectStoreNames.contains("statuses")) {
-        const store = db.createObjectStore("statuses", { keyPath: "id", autoIncrement: true });
+        const store = db.createObjectStore("statuses", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
         store.createIndex("projectId", "projectId", { unique: false });
       }
       if (!db.objectStoreNames.contains("tasks")) {
-        const store = db.createObjectStore("tasks", { keyPath: "id", autoIncrement: true });
+        const store = db.createObjectStore("tasks", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
         store.createIndex("projectId", "projectId", { unique: false });
         store.createIndex("statusId", "statusId", { unique: false });
       }
       if (!db.objectStoreNames.contains("boards")) {
-        const store = db.createObjectStore("boards", { keyPath: "id", autoIncrement: true });
+        const store = db.createObjectStore("boards", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
         store.createIndex("projectId", "projectId", { unique: false });
       }
       if (!db.objectStoreNames.contains("meta")) {
@@ -39,7 +61,11 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function tx<T>(
+  store: string,
+  mode: IDBTransactionMode,
+  fn: (s: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
   return openDB().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
@@ -53,22 +79,59 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
 
 export function slugify(name: string): string {
   const map: Record<string, string> = {
-    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y",
-    к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f",
-    х: "h", ц: "ts", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+    а: "a",
+    б: "b",
+    в: "v",
+    г: "g",
+    д: "d",
+    е: "e",
+    ё: "e",
+    ж: "zh",
+    з: "z",
+    и: "i",
+    й: "y",
+    к: "k",
+    л: "l",
+    м: "m",
+    н: "n",
+    о: "o",
+    п: "p",
+    р: "r",
+    с: "s",
+    т: "t",
+    у: "u",
+    ф: "f",
+    х: "h",
+    ц: "ts",
+    ч: "ch",
+    ш: "sh",
+    щ: "sch",
+    ъ: "",
+    ы: "y",
+    ь: "",
+    э: "e",
+    ю: "yu",
+    я: "ya",
   };
-  return name
-    .toLowerCase()
-    .split("")
-    .map((c) => map[c] ?? c)
-    .join("")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "project";
+  return (
+    name
+      .toLowerCase()
+      .split("")
+      .map((c) => map[c] ?? c)
+      .join("")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "project"
+  );
 }
 
-async function getUniqueSlug(baseSlug: string, excludeId?: number): Promise<string> {
+async function getUniqueSlug(
+  baseSlug: string,
+  excludeId?: number,
+): Promise<string> {
   const projects = await listProjects();
-  const existing = new Set(projects.filter((p) => p.id !== excludeId).map((p) => p.slug));
+  const existing = new Set(
+    projects.filter((p) => p.id !== excludeId).map((p) => p.slug),
+  );
   if (!existing.has(baseSlug)) return baseSlug;
   let suffix = 2;
   while (existing.has(`${baseSlug}-${suffix}`)) suffix++;
@@ -77,7 +140,10 @@ async function getUniqueSlug(baseSlug: string, excludeId?: number): Promise<stri
 
 // ─── Projects ───
 
-export async function createProject(name: string, description?: string): Promise<Project> {
+export async function createProject(
+  name: string,
+  description?: string,
+): Promise<Project> {
   const slug = await getUniqueSlug(slugify(name));
   const createdAt = new Date().toISOString();
   const record = {
@@ -88,7 +154,14 @@ export async function createProject(name: string, description?: string): Promise
     createdAt,
   };
   const id = Number(await tx("projects", "readwrite", (s) => s.add(record)));
-  const project: Project = { id, slug, name, description, organizationId: 0, createdAt };
+  const project: Project = {
+    id,
+    slug,
+    name,
+    description,
+    organizationId: 0,
+    createdAt,
+  };
 
   // Initialize default statuses and board (mirrors backend InitializeProject)
   await createStatus(project.id, "To Do", "#6b7280", 0);
@@ -100,7 +173,11 @@ export async function createProject(name: string, description?: string): Promise
 }
 
 export async function listProjects(): Promise<Project[]> {
-  return tx<Project[]>("projects", "readonly", (s) => s.getAll() as IDBRequest<Project[]>);
+  return tx<Project[]>(
+    "projects",
+    "readonly",
+    (s) => s.getAll() as IDBRequest<Project[]>,
+  );
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -114,7 +191,11 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
   });
 }
 
-export async function updateProject(id: number, name: string, description?: string): Promise<Project> {
+export async function updateProject(
+  id: number,
+  name: string,
+  description?: string,
+): Promise<Project> {
   const slug = await getUniqueSlug(slugify(name), id);
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -143,7 +224,10 @@ export async function updateProject(id: number, name: string, description?: stri
 
 export async function deleteProject(id: number): Promise<void> {
   const db = await openDB();
-  const transaction = db.transaction(["projects", "statuses", "tasks", "boards"], "readwrite");
+  const transaction = db.transaction(
+    ["projects", "statuses", "tasks", "boards"],
+    "readwrite",
+  );
   transaction.objectStore("projects").delete(id);
 
   // Delete statuses for this project
@@ -198,8 +282,18 @@ export async function listStatuses(projectId: number): Promise<TaskStatus[]> {
     const idx = transaction.objectStore("statuses").index("projectId");
     const req = idx.getAll(projectId);
     req.onsuccess = () => {
-      const results = (req.result ?? []) as (TaskStatus & { projectId: number })[];
-      resolve(results.map(({ id, name, color, isEnd, position }) => ({ id, name, color, isEnd, position })));
+      const results = (req.result ?? []) as (TaskStatus & {
+        projectId: number;
+      })[];
+      resolve(
+        results.map(({ id, name, color, isEnd, position }) => ({
+          id,
+          name,
+          color,
+          isEnd,
+          position,
+        })),
+      );
     };
     req.onerror = () => reject(req.error);
   });
@@ -219,7 +313,8 @@ export async function updateStatus(
     const store = transaction.objectStore("statuses");
     const req = store.get(statusId);
     req.onsuccess = () => {
-      const existing = req.result as (TaskStatus & { projectId: number }) | undefined;
+      const existing = req.result as
+        (TaskStatus & { projectId: number }) | undefined;
       if (!existing || existing.projectId !== projectId) {
         reject(new Error("Status not found"));
         return;
@@ -283,7 +378,13 @@ export async function createTask(
     order,
     boardId: boardId ?? undefined,
     status: status
-      ? { id: status.id, name: status.name, color: status.color, isEnd: status.isEnd, position: status.position }
+      ? {
+          id: status.id,
+          name: status.name,
+          color: status.color,
+          isEnd: status.isEnd,
+          position: status.position,
+        }
       : undefined,
     createdAt: now,
     updatedAt: now,
@@ -298,11 +399,16 @@ export async function listTasks(projectId: number): Promise<TaskListResponse> {
     const taskIdx = transaction.objectStore("tasks").index("projectId");
     const taskReq = taskIdx.getAll(projectId);
     taskReq.onsuccess = () => {
-      const rawTasks = (taskReq.result ?? []) as (Task & { projectId: number; statusId: number })[];
+      const rawTasks = (taskReq.result ?? []) as (Task & {
+        projectId: number;
+        statusId: number;
+      })[];
       const statusStore = transaction.objectStore("statuses");
       const statusReq = statusStore.getAll();
       statusReq.onsuccess = () => {
-        const statuses = (statusReq.result ?? []) as (TaskStatus & { projectId: number })[];
+        const statuses = (statusReq.result ?? []) as (TaskStatus & {
+          projectId: number;
+        })[];
         const statusMap = new Map(statuses.map((s) => [s.id, s]));
         const tasks: Task[] = rawTasks.map((t) => {
           const st = statusMap.get(t.statusId);
@@ -317,7 +423,13 @@ export async function listTasks(projectId: number): Promise<TaskListResponse> {
             order: t.order,
             boardId: t.boardId ?? undefined,
             status: st
-              ? { id: st.id, name: st.name, color: st.color, isEnd: st.isEnd, position: st.position }
+              ? {
+                  id: st.id,
+                  name: st.name,
+                  color: st.color,
+                  isEnd: st.isEnd,
+                  position: st.position,
+                }
               : undefined,
             createdAt: t.createdAt,
             updatedAt: t.updatedAt,
@@ -342,16 +454,24 @@ export async function updateTask(
     const taskStore = transaction.objectStore("tasks");
     const req = taskStore.get(taskId);
     req.onsuccess = () => {
-      const existing = req.result as (Task & { projectId: number; statusId: number }) | undefined;
+      const existing = req.result as
+        (Task & { projectId: number; statusId: number }) | undefined;
       if (!existing || existing.projectId !== projectId) {
         reject(new Error("Task not found"));
         return;
       }
-      const updated = { ...existing, ...input, updatedAt: new Date().toISOString() };
+      const updated = {
+        ...existing,
+        ...input,
+        updatedAt: new Date().toISOString(),
+      };
       taskStore.put(updated);
-      const statusReq = transaction.objectStore("statuses").get(updated.statusId);
+      const statusReq = transaction
+        .objectStore("statuses")
+        .get(updated.statusId);
       statusReq.onsuccess = () => {
-        const st = statusReq.result as (TaskStatus & { projectId: number }) | undefined;
+        const st = statusReq.result as
+          (TaskStatus & { projectId: number }) | undefined;
         const task: Task = {
           id: updated.id,
           shortId: updated.shortId,
@@ -363,7 +483,13 @@ export async function updateTask(
           order: updated.order,
           boardId: updated.boardId ?? undefined,
           status: st
-            ? { id: st.id, name: st.name, color: st.color, isEnd: st.isEnd, position: st.position }
+            ? {
+                id: st.id,
+                name: st.name,
+                color: st.color,
+                isEnd: st.isEnd,
+                position: st.position,
+              }
             : undefined,
           createdAt: updated.createdAt,
           updatedAt: updated.updatedAt,
@@ -419,16 +545,14 @@ export async function ensureDefaultBoard(projectId: number): Promise<void> {
   await createBoard(projectId, "Main Board", 0);
 }
 
-export async function updateBoard(
-  id: number,
-  name: string,
-): Promise<Board> {
+export async function updateBoard(id: number, name: string): Promise<Board> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("boards", "readwrite");
     const req = transaction.objectStore("boards").get(id);
     req.onsuccess = () => {
-      const existing = req.result as (Board & { projectId: number }) | undefined;
+      const existing = req.result as
+        (Board & { projectId: number }) | undefined;
       if (!existing) {
         reject(new Error("Board not found"));
         return;
@@ -436,7 +560,11 @@ export async function updateBoard(
       const updated = { ...existing, name };
       transaction.objectStore("boards").put(updated);
       transaction.oncomplete = () => {
-        resolve({ id: updated.id, name: updated.name, position: updated.position });
+        resolve({
+          id: updated.id,
+          name: updated.name,
+          position: updated.position,
+        });
       };
     };
     req.onerror = () => reject(req.error);
@@ -453,7 +581,10 @@ export async function seedDefaultData(): Promise<void> {
   const projects = await listProjects();
   if (projects.length > 0) return;
 
-  const _project = await createProject("My First Project", "Default local project");
+  const _project = await createProject(
+    "My First Project",
+    "Default local project",
+  );
   // createProject already creates default statuses and a board
 }
 
@@ -487,7 +618,11 @@ function clearStore(db: IDBDatabase, store: string): Promise<void> {
   });
 }
 
-function putAllToStore(db: IDBDatabase, store: string, records: unknown[]): Promise<void> {
+function putAllToStore(
+  db: IDBDatabase,
+  store: string,
+  records: unknown[],
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
     const os = tx.objectStore(store);

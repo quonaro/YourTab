@@ -1,9 +1,12 @@
 // PKCE (Proof Key for Code Exchange) utilities for OAuth
 
 export function generateRandomString(length: number): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
   const values = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(values).map((v) => chars[v % chars.length]).join("");
+  return Array.from(values)
+    .map((v) => chars[v % chars.length])
+    .join("");
 }
 
 export async function sha256(plain: string): Promise<ArrayBuffer> {

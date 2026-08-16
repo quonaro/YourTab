@@ -53,7 +53,12 @@ function isLocked(taskId: number): boolean {
         :value="newTaskInput"
         class="input-base h-8 text-xs"
         :placeholder="t('board.newTaskInCell')"
-        @input="emit('update:new-task-input', ($event.target as HTMLInputElement).value)"
+        @input="
+          emit(
+            'update:new-task-input',
+            ($event.target as HTMLInputElement).value,
+          )
+        "
         @keyup.enter="emit('create-task', boardId, status.id)"
         @blur="emit('update:new-task-input', '')"
       />
@@ -99,9 +104,7 @@ function isLocked(taskId: number): boolean {
           draggable="false"
           class="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-card/80 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition hover:bg-muted hover:text-foreground group-hover/task:opacity-100"
           :title="
-            task.archived
-              ? t('board.unarchiveTask')
-              : t('board.archiveTask')
+            task.archived ? t('board.unarchiveTask') : t('board.archiveTask')
           "
           @click.stop="
             task.archived

@@ -17,7 +17,14 @@ export async function seedDevData(): Promise<void> {
     "Веб-сайт компании",
     "Редизайн корпоративного сайта",
     [
-      { status: 0, titles: ["Создать лендинг", "Подобрать шрифты", "Написать текст для hero-секции"] },
+      {
+        status: 0,
+        titles: [
+          "Создать лендинг",
+          "Подобрать шрифты",
+          "Написать текст для hero-секции",
+        ],
+      },
       { status: 1, titles: ["Интеграция с CMS", "Адаптивная вёрстка"] },
       { status: 2, titles: ["Установка аналитики", "Покупка домена"] },
     ],
@@ -28,8 +35,14 @@ export async function seedDevData(): Promise<void> {
     "Мобильное приложение",
     "Трекер задач для iOS и Android",
     [
-      { status: 0, titles: ["Экран онбординга", "Push-уведомления", "Тёмная тема"] },
-      { status: 1, titles: ["Авторизация через OAuth", "Синхронизация с сервером"] },
+      {
+        status: 0,
+        titles: ["Экран онбординга", "Push-уведомления", "Тёмная тема"],
+      },
+      {
+        status: 1,
+        titles: ["Авторизация через OAuth", "Синхронизация с сервером"],
+      },
       { status: 2, titles: ["Базовый CRUD задач", "Навигация по табам"] },
     ],
     ["iOS", "Android", "Backend"],
@@ -41,7 +54,10 @@ export async function seedDevData(): Promise<void> {
     [
       { status: 0, titles: ["A/B тест лендинга", "Настроить ретаргетинг"] },
       { status: 1, titles: ["Email-рассылка", "Контент-план блога"] },
-      { status: 2, titles: ["Запуск Reddit-кампании", "Обновление презентации"] },
+      {
+        status: 2,
+        titles: ["Запуск Reddit-кампании", "Обновление презентации"],
+      },
     ],
     ["Email", "Social"],
   );
@@ -68,7 +84,12 @@ async function seedProject(
     const status = statuses[group.status];
     if (!status) continue;
     for (const title of group.titles) {
-      const task = await createTask(project.id, title, status.id, defaultBoardId);
+      const task = await createTask(
+        project.id,
+        title,
+        status.id,
+        defaultBoardId,
+      );
       if (taskCounter % 3 === 0) {
         await updateTask(project.id, task.id, { priority: 3 });
       } else if (taskCounter % 3 === 1) {

@@ -19,7 +19,10 @@ function dismiss() {
 </script>
 
 <template>
-  <div v-if="error" class="flex min-h-[200px] flex-col items-center justify-center gap-4 p-8 text-center">
+  <div
+    v-if="error"
+    class="flex min-h-[200px] flex-col items-center justify-center gap-4 p-8 text-center"
+  >
     <IconAlertTriangle :size="40" class="text-destructive" />
     <div class="space-y-1">
       <p class="text-sm font-medium text-foreground">Something went wrong</p>

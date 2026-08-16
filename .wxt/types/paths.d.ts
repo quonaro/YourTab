@@ -15,8 +15,8 @@ declare module "wxt/browser" {
     | "/fonts/stetica/medium.otf"
     | "/fonts/stetica/regular.otf"
     | "/newtab.html"
-    | "/options.html"
-  type HtmlPublicPath = Extract<PublicPath, `${string}.html`>
+    | "/options.html";
+  type HtmlPublicPath = Extract<PublicPath, `${string}.html`>;
   export interface WxtRuntime {
     getURL(path: PublicPath): string;
     getURL(path: `${HtmlPublicPath}${string}`): string;

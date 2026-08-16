@@ -37,14 +37,17 @@ export function useApi() {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async function apiFetch<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
     let token = await getValidAccessToken();
     if (!token) {
       throw new Error("Not authenticated");
     }
 
     const headers = {
-      "Authorization": `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
       ...options.headers,
     };
@@ -53,7 +56,10 @@ export function useApi() {
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
+        response = await fetch(`${getApiBase()}${path}`, {
+          ...options,
+          headers,
+        });
       } catch (err) {
         // Network error — retry with backoff
         if (attempt < MAX_RETRIES) {
@@ -64,7 +70,10 @@ export function useApi() {
       }
 
       // Retry on expired/invalid access token (only on first attempt)
-      if ((response.status === 401 || response.status === 403) && attempt === 0) {
+      if (
+        (response.status === 401 || response.status === 403) &&
+        attempt === 0
+      ) {
         const body = await response.json().catch(() => ({}));
         if (AUTH_ERRORS.has(body.detail)) {
           const refreshed = await refreshTokens();
@@ -92,7 +101,9 @@ export function useApi() {
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.detail || body.title || `API error: ${response.status}`);
+      throw new Error(
+        body.detail || body.title || `API error: ${response.status}`,
+      );
     }
 
     return response.json();
@@ -126,8 +137,7 @@ export function useApi() {
       query.set("responsible_ids", params.responsibleIds.join(","));
     if (params?.createdByIds?.length)
       query.set("created_by_ids", params.createdByIds.join(","));
-    if (params?.tagIds?.length)
-      query.set("tag_ids", params.tagIds.join(","));
+    if (params?.tagIds?.length) query.set("tag_ids", params.tagIds.join(","));
     if (params?.sprintIds?.length)
       query.set("sprint_ids", params.sprintIds.join(","));
     if (params?.priority != null)
@@ -172,12 +182,16 @@ export function useApi() {
   }
 
   async function getBoards(projectSlug: string): Promise<Board[]> {
-    const resp = await apiFetch<{ boards: Board[] }>(`/projects/${projectSlug}/boards`);
+    const resp = await apiFetch<{ boards: Board[] }>(
+      `/projects/${projectSlug}/boards`,
+    );
     return resp.boards ?? [];
   }
 
   async function getStatuses(projectSlug: string): Promise<TaskStatus[]> {
-    const resp = await apiFetch<{ statuses: TaskStatus[] }>(`/projects/${projectSlug}/statuses`);
+    const resp = await apiFetch<{ statuses: TaskStatus[] }>(
+      `/projects/${projectSlug}/statuses`,
+    );
     return resp.statuses ?? [];
   }
 
@@ -244,7 +258,12 @@ export function useApi() {
   async function updateStatus(
     projectSlug: string,
     statusId: number,
-    input: { name?: string; color?: string; isEnd?: boolean; position?: number },
+    input: {
+      name?: string;
+      color?: string;
+      isEnd?: boolean;
+      position?: number;
+    },
   ): Promise<TaskStatus> {
     const resp = await apiFetch<{ status: TaskStatus }>(
       `/projects/${projectSlug}/statuses/${statusId}`,
@@ -313,13 +332,10 @@ export function useApi() {
     name: string,
     description?: string,
   ): Promise<Project> {
-    const resp = await apiFetch<Project>(
-      `/projects/${projectSlug}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({ name, description }),
-      },
-    );
+    const resp = await apiFetch<Project>(`/projects/${projectSlug}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, description }),
+    });
     return resp;
   }
 

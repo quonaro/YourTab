@@ -32,7 +32,9 @@ function updateFilter(patch: Partial<TaskFilters>) {
 
 <template>
   <Teleport to="body">
-    <Transition :name="animationsEnabled ? 'filter-sidebar' : 'no-anim-filter-sidebar'">
+    <Transition
+      :name="animationsEnabled ? 'filter-sidebar' : 'no-anim-filter-sidebar'"
+    >
       <div
         v-if="open"
         class="fixed inset-0 z-50 flex justify-end bg-black/50"

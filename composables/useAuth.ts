@@ -45,24 +45,26 @@ if (tokens.value) {
         refresh_token: tokens.value.refreshToken,
         client_id: getOAuthClientId(),
       }),
-    }).then(async (resp) => {
-      if (!resp.ok) {
+    })
+      .then(async (resp) => {
+        if (!resp.ok) {
+          tokens.value = null;
+          saveTokensToStorage(null);
+          return;
+        }
+        const data = await resp.json();
+        tokens.value = {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token || tokens.value!.refreshToken,
+          expiresAt: Math.floor(Date.now() / 1000) + data.expires_in,
+          user: data.user || tokens.value!.user,
+        };
+        saveTokensToStorage(tokens.value);
+      })
+      .catch(() => {
         tokens.value = null;
         saveTokensToStorage(null);
-        return;
-      }
-      const data = await resp.json();
-      tokens.value = {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token || tokens.value!.refreshToken,
-        expiresAt: Math.floor(Date.now() / 1000) + data.expires_in,
-        user: data.user || tokens.value!.user,
-      };
-      saveTokensToStorage(tokens.value);
-    }).catch(() => {
-      tokens.value = null;
-      saveTokensToStorage(null);
-    });
+      });
   }
 }
 
@@ -75,7 +77,8 @@ export function useAuth() {
     loading.value = true;
     error.value = null;
     try {
-      const { codeVerifier, codeChallenge, codeChallengeMethod } = await generatePKCE();
+      const { codeVerifier, codeChallenge, codeChallengeMethod } =
+        await generatePKCE();
       // Store verifier for later use in token exchange
       sessionStorage.setItem("pkce_verifier", codeVerifier);
 

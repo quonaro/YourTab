@@ -47,8 +47,7 @@ function stopPing() {
 async function connect() {
   if (
     ws &&
-    (ws.readyState === WebSocket.OPEN ||
-      ws.readyState === WebSocket.CONNECTING)
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
   ) {
     return;
   }

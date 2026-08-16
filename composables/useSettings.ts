@@ -1,5 +1,9 @@
 import { ref, watch } from "vue";
-import { readSettings, writeSettings, type ExtensionSettings } from "@/lib/settings";
+import {
+  readSettings,
+  writeSettings,
+  type ExtensionSettings,
+} from "@/lib/settings";
 
 // Module-level singleton state — shared across all useSettings() callers in the same page.
 const settings = ref<ExtensionSettings>(readSettings());

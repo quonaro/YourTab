@@ -1,7 +1,13 @@
 import { ref } from "vue";
 import * as db from "@/lib/localDb";
 import { seedDevData } from "@/lib/seedDev";
-import type { Task, TaskStatus, Project, Board, TaskListResponse } from "@/lib/types";
+import type {
+  Task,
+  TaskStatus,
+  Project,
+  Board,
+  TaskListResponse,
+} from "@/lib/types";
 
 export function useLocalApi() {
   const projects = ref<Project[]>([]);
@@ -71,7 +77,10 @@ export function useLocalApi() {
     return db.updateStatus(project.id, statusId, name, color, position, isEnd);
   }
 
-  async function deleteStatus(projectSlug: string, statusId: number): Promise<void> {
+  async function deleteStatus(
+    projectSlug: string,
+    statusId: number,
+  ): Promise<void> {
     const project = await db.getProjectBySlug(projectSlug);
     if (!project) throw new Error("Project not found");
     await db.deleteStatus(statusId);
@@ -94,7 +103,12 @@ export function useLocalApi() {
     const project = await db.getProjectBySlug(projectSlug);
     if (!project) throw new Error("Project not found");
     if (!input.statusId) throw new Error("Status ID required");
-    return db.createTask(project.id, input.title, input.statusId, input.boardId);
+    return db.createTask(
+      project.id,
+      input.title,
+      input.statusId,
+      input.boardId,
+    );
   }
 
   async function getBoards(projectSlug: string): Promise<Board[]> {
@@ -124,7 +138,10 @@ export function useLocalApi() {
     return db.updateBoard(boardId, name);
   }
 
-  async function deleteBoard(projectSlug: string, boardId: number): Promise<void> {
+  async function deleteBoard(
+    projectSlug: string,
+    boardId: number,
+  ): Promise<void> {
     const project = await db.getProjectBySlug(projectSlug);
     if (!project) throw new Error("Project not found");
     await db.deleteBoard(boardId);

@@ -7,7 +7,7 @@ push:
   desc: Push to GitHub
   color: cyan
   args:
-  - "tag:str?"
+    - "tag:str?"
   script: |
     if [ -n "$tag" ]; then
       git tag -f "$tag"

@@ -56,7 +56,10 @@ function generateId(): string {
 const notes = ref<Note[]>(loadNotes());
 const activeNoteId = ref<string | null>(loadActiveNoteId());
 
-if (activeNoteId.value && !notes.value.find((n) => n.id === activeNoteId.value)) {
+if (
+  activeNoteId.value &&
+  !notes.value.find((n) => n.id === activeNoteId.value)
+) {
   activeNoteId.value = null;
 }
 if (!activeNoteId.value && notes.value.length > 0) {

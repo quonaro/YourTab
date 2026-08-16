@@ -2,7 +2,7 @@ export const SETTINGS_KEY = "yourtask-settings";
 
 export type Theme = "light" | "dark" | "system";
 export type AccentKey =
-  | "indigo" | "blue" | "emerald" | "orange" | "purple" | "pink" | "cyan";
+  "indigo" | "blue" | "emerald" | "orange" | "purple" | "pink" | "cyan";
 export type Language = "ru" | "en";
 
 export interface QuickLink {
@@ -58,11 +58,15 @@ export function readSettings(): ExtensionSettings {
       quickLinks: Array.isArray(parsed.quickLinks)
         ? (parsed.quickLinks as QuickLink[])
         : defaultSettings.quickLinks,
-      uiScale: typeof parsed.uiScale === "number" && parsed.uiScale >= 25 && parsed.uiScale <= 150
-        ? parsed.uiScale
-        : defaultSettings.uiScale,
-      animationsEnabled: parsed.animationsEnabled ?? defaultSettings.animationsEnabled,
- };
+      uiScale:
+        typeof parsed.uiScale === "number" &&
+        parsed.uiScale >= 25 &&
+        parsed.uiScale <= 150
+          ? parsed.uiScale
+          : defaultSettings.uiScale,
+      animationsEnabled:
+        parsed.animationsEnabled ?? defaultSettings.animationsEnabled,
+    };
   } catch {
     return defaultSettings;
   }

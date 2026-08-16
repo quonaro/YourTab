@@ -15,7 +15,9 @@ const accents = Object.entries(ACCENTS).map(([key, val]) => ({
 
 export function useTheme() {
   function applyTheme(theme: Theme) {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     const isDark = theme === "dark" || (theme === "system" && prefersDark);
     const root = document.documentElement;
     if (isDark) {
@@ -51,12 +53,14 @@ export function useTheme() {
     applyAccent(settings.accent);
 
     // Listen for system theme changes
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-      const s = readSettings();
-      if (s.theme === "system") {
-        applyTheme("system");
-      }
-    });
+    window
+      .matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", () => {
+        const s = readSettings();
+        if (s.theme === "system") {
+          applyTheme("system");
+        }
+      });
   }
 
   return {

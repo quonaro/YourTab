@@ -1,0 +1,27 @@
+default_install_hook_types: [pre-commit]
+default_stages: [pre-commit]
+fail_fast: true
+
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        language: system
+        files: '\.(vue|ts|js|mjs|cjs|json|css|scss|yml|yaml|md)$'
+        pass_filenames: false
+        entry: pnpm run format
+
+      - id: vue-tsc
+        name: vue-tsc
+        language: system
+        files: '\.(vue|ts|js)$'
+        pass_filenames: false
+        entry: pnpm run typecheck
+
+      - id: vitest
+        name: vitest
+        language: system
+        files: '\.(vue|ts|js)$'
+        pass_filenames: false
+        entry: pnpm run test

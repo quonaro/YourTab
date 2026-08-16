@@ -65,7 +65,7 @@ async function loadRemoteOrgs() {
   }
 }
 
-function syncSelectedOrg(newOrg: string | null) {
+function syncSelectedOrg(newOrg: string | null | undefined) {
   if (newOrg === "local") {
     selectedOrgType.value = "local";
     selectedOrg.value = null;

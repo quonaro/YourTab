@@ -79,9 +79,7 @@ function onSubmit(event: Event) {
 
 function useMediaQuery(query: string) {
   const matches = ref(
-    typeof window !== "undefined"
-      ? window.matchMedia(query).matches
-      : false,
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
   );
   if (typeof window !== "undefined") {
     const mql = window.matchMedia(query);

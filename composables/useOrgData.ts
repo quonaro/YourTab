@@ -1,7 +1,17 @@
 import { computed, type Ref } from "vue";
 import { useApi } from "./useApi";
 import { useLocalApi } from "./useLocalApi";
-import type { Task, TaskStatus, Project, Board, TaskListResponse, UserInfo, TaskTag, SprintInfo, TaskListParams } from "@/lib/types";
+import type {
+  Task,
+  TaskStatus,
+  Project,
+  Board,
+  TaskListResponse,
+  UserInfo,
+  TaskTag,
+  SprintInfo,
+  TaskListParams,
+} from "@/lib/types";
 
 export type OrgType = "local" | "remote";
 
@@ -11,7 +21,10 @@ export interface OrgEntry {
   name: string;
 }
 
-export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) {
+export function useOrgData(
+  orgType: Ref<OrgType>,
+  _orgSlug: Ref<string | null>,
+) {
   const remoteApi = useApi();
   const localApi = useLocalApi();
 
@@ -25,7 +38,10 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     return [];
   }
 
-  async function listTasks(projectSlug: string, params?: TaskListParams): Promise<TaskListResponse> {
+  async function listTasks(
+    projectSlug: string,
+    params?: TaskListParams,
+  ): Promise<TaskListResponse> {
     if (isLocal.value) return localApi.listTasks(projectSlug);
     return remoteApi.listTasks(projectSlug, params);
   }
@@ -42,7 +58,8 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     position: number,
     isEnd = false,
   ): Promise<TaskStatus> {
-    if (isLocal.value) return localApi.createStatus(projectSlug, name, color, position, isEnd);
+    if (isLocal.value)
+      return localApi.createStatus(projectSlug, name, color, position, isEnd);
     return remoteApi.createStatus(projectSlug, name, color, position, isEnd);
   }
 
@@ -54,11 +71,27 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     position: number,
     isEnd = false,
   ): Promise<TaskStatus> {
-    if (isLocal.value) return localApi.updateStatus(projectSlug, statusId, name, color, position, isEnd);
-    return remoteApi.updateStatus(projectSlug, statusId, { name, color, isEnd, position });
+    if (isLocal.value)
+      return localApi.updateStatus(
+        projectSlug,
+        statusId,
+        name,
+        color,
+        position,
+        isEnd,
+      );
+    return remoteApi.updateStatus(projectSlug, statusId, {
+      name,
+      color,
+      isEnd,
+      position,
+    });
   }
 
-  async function deleteStatus(projectSlug: string, statusId: number): Promise<void> {
+  async function deleteStatus(
+    projectSlug: string,
+    statusId: number,
+  ): Promise<void> {
     if (isLocal.value) return localApi.deleteStatus(projectSlug, statusId);
     const statuses = await remoteApi.getStatuses(projectSlug);
     const fallback = statuses.find((s) => s.id !== statusId);
@@ -103,17 +136,27 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     return remoteApi.getProjectSprints(projectSlug);
   }
 
-  async function createBoard(projectSlug: string, name: string): Promise<Board> {
+  async function createBoard(
+    projectSlug: string,
+    name: string,
+  ): Promise<Board> {
     if (isLocal.value) return localApi.createBoard(projectSlug, name);
     return remoteApi.createBoard(projectSlug, name, 0);
   }
 
-  async function updateBoard(projectSlug: string, boardId: number, name: string): Promise<Board> {
+  async function updateBoard(
+    projectSlug: string,
+    boardId: number,
+    name: string,
+  ): Promise<Board> {
     if (isLocal.value) return localApi.updateBoard(projectSlug, boardId, name);
     return remoteApi.updateBoard(projectSlug, boardId, name);
   }
 
-  async function deleteBoard(projectSlug: string, boardId: number): Promise<void> {
+  async function deleteBoard(
+    projectSlug: string,
+    boardId: number,
+  ): Promise<void> {
     if (isLocal.value) return localApi.deleteBoard(projectSlug, boardId);
     await remoteApi.deleteBoard(projectSlug, boardId);
   }
@@ -139,10 +182,16 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
   async function createProject(name: string): Promise<Project> {
     if (isLocal.value) return localApi.createProject(name);
     // Remote project creation is handled via the web app, not the extension API
-    throw new Error("Remote project creation is not available in the extension");
+    throw new Error(
+      "Remote project creation is not available in the extension",
+    );
   }
 
-  async function updateProject(id: number, name: string, slug?: string): Promise<Project> {
+  async function updateProject(
+    id: number,
+    name: string,
+    slug?: string,
+  ): Promise<Project> {
     if (isLocal.value) return localApi.updateProject(id, name);
     if (!slug) throw new Error("Project slug is required for remote update");
     return remoteApi.updateProject(slug, name);

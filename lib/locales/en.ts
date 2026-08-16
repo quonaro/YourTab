@@ -38,9 +38,12 @@ export default {
     newTask: "New task...",
     addTask: "Add task",
     dismiss: "Dismiss",
-    readOnlyBanner: "This organization is in read-only mode. Task creation and editing are disabled.",
-    readOnlyError: "Organization is in read-only mode. Writing operations are disabled.",
-    agileNotAvailable: "Agile boards are not available on this organization's plan.",
+    readOnlyBanner:
+      "This organization is in read-only mode. Task creation and editing are disabled.",
+    readOnlyError:
+      "Organization is in read-only mode. Writing operations are disabled.",
+    agileNotAvailable:
+      "Agile boards are not available on this organization's plan.",
     addStatus: "Add status",
     addBoard: "Add board",
     createColumn: "Create column",
@@ -123,7 +126,8 @@ export default {
     title: "YourTask Extension Settings",
     apiDomain: "API Domain",
     apiDomainPlaceholder: "https://yourtask.example.com",
-    apiDomainHint: "Domain for self-hosted YourTask instances. Leave empty for default.",
+    apiDomainHint:
+      "Domain for self-hosted YourTask instances. Leave empty for default.",
     theme: "Theme",
     accentColor: "Accent Color",
     language: "Language",
@@ -162,7 +166,8 @@ export default {
     create: "Create",
     noProjects: "No projects yet",
     deleteConfirmTitle: "Delete project?",
-    deleteConfirmText: "Are you sure you want to delete this project? All tasks will be permanently lost.",
+    deleteConfirmText:
+      "Are you sure you want to delete this project? All tasks will be permanently lost.",
     deleteConfirmButton: "Delete",
     deleteCancelButton: "Cancel",
     editProject: "Edit project",

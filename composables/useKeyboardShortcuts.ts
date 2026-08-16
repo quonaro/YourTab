@@ -31,7 +31,9 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutOptions) {
 
     if (e.key === "/") {
       e.preventDefault();
-      document.querySelector<HTMLElement>('[data-keyboard-shortcut="search"]')?.focus();
+      document
+        .querySelector<HTMLElement>('[data-keyboard-shortcut="search"]')
+        ?.focus();
       return;
     }
 
