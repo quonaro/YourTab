@@ -37,14 +37,17 @@ jobs:
       - name: Build & zip (Firefox)
         run: pnpm zip:firefox
 
-      - name: List output directory
-        run: ls -la .output/
+      - name: Collect zip files
+        run: |
+          mkdir -p zips
+          find .output -name '*.zip' -exec cp {} zips/ \;
+          ls -la zips/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: yourtab-extension
-          path: .output/*.zip
+          path: zips/*.zip
           if-no-files-found: error
           retention-days: 30
 
