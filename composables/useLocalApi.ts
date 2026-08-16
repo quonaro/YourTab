@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import * as db from "@/lib/localDb";
+import { seedDevData } from "@/lib/seedDev";
 import type { Task, TaskStatus, Project, Board, TaskListResponse } from "@/lib/types";
 
 export function useLocalApi() {
@@ -134,6 +135,11 @@ export function useLocalApi() {
     await loadProjects();
   }
 
+  async function seedDevIfEmpty(): Promise<void> {
+    await seedDevData();
+    await loadProjects();
+  }
+
   return {
     projects,
     projectsLoading,
@@ -153,5 +159,6 @@ export function useLocalApi() {
     updateBoard,
     deleteBoard,
     seedIfEmpty,
+    seedDevIfEmpty,
   };
 }

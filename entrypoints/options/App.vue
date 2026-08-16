@@ -96,7 +96,10 @@ async function handleImportFile(event: Event) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-foreground p-8">
+  <div
+    class="min-h-screen bg-background text-foreground p-8"
+    :class="{ 'animations-disabled': !settings.animationsEnabled }"
+  >
     <div class="mx-auto max-w-2xl space-y-6">
       <h1 class="text-2xl font-semibold">{{ t("options.title") }}</h1>
 

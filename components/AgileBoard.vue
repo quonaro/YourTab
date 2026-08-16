@@ -126,6 +126,11 @@ const statusAnimName = computed(() =>
 const boardAnimName = computed(() =>
   settings.value.animationsEnabled ? "board" : "no-anim-board",
 );
+const filterSidebarAnimName = computed(() =>
+  settings.value.animationsEnabled
+    ? "filter-sidebar"
+    : "no-anim-filter-sidebar",
+);
 
 // ─── Search & Filters (remote only) ───
 const searchQuery = ref("");
@@ -180,15 +185,21 @@ const priorityOptions = computed(() => [
   { value: 4, label: t("taskCard.priority.urgent") },
 ]);
 
-const sortOptions = computed(() => [
-  { value: "default", label: t("boardFilters.sortDefault") },
-  { value: "deadline-asc", label: t("boardFilters.sortDeadlineAsc") },
-  { value: "deadline-desc", label: t("boardFilters.sortDeadlineDesc") },
-  { value: "priority-desc", label: t("boardFilters.sortPriorityDesc") },
-  { value: "priority-asc", label: t("boardFilters.sortPriorityAsc") },
-  { value: "title-asc", label: t("boardFilters.sortTitleAsc") },
-  { value: "title-desc", label: t("boardFilters.sortTitleDesc") },
-]);
+const sortOptions = computed(() => {
+  const opts = [
+    { value: "default", label: t("boardFilters.sortDefault") },
+    { value: "deadline-asc", label: t("boardFilters.sortDeadlineAsc") },
+    { value: "deadline-desc", label: t("boardFilters.sortDeadlineDesc") },
+    { value: "priority-desc", label: t("boardFilters.sortPriorityDesc") },
+    { value: "priority-asc", label: t("boardFilters.sortPriorityAsc") },
+    { value: "title-asc", label: t("boardFilters.sortTitleAsc") },
+    { value: "title-desc", label: t("boardFilters.sortTitleDesc") },
+  ];
+  if (!isRemote.value) {
+    return opts.filter((o) => !o.value.startsWith("deadline-"));
+  }
+  return opts;
+});
 
 const hasActiveFilters = computed(() => {
   const f = filters.value;
@@ -2085,7 +2096,7 @@ async function handleDeleteBoardConfirm() {
 
   <!-- Filter sidebar (remote only) -->
   <Teleport to="body">
-    <Transition name="filter-sidebar">
+    <Transition :name="filterSidebarAnimName">
       <div
         v-if="filterSidebarOpen"
         class="fixed inset-0 z-50 flex justify-end bg-black/50"
@@ -2356,5 +2367,49 @@ async function handleDeleteBoardConfirm() {
   to {
     opacity: 1;
   }
+}
+
+/* ─── No-animation variants (when animationsEnabled is false) ─── */
+.no-anim-task-move,
+.no-anim-task-enter-active,
+.no-anim-task-leave-active {
+  transition: none;
+}
+.no-anim-task-enter-from,
+.no-anim-task-leave-to {
+  opacity: 1;
+  transform: none;
+}
+.no-anim-status-move,
+.no-anim-status-enter-active,
+.no-anim-status-leave-active {
+  transition: none;
+}
+.no-anim-status-enter-from,
+.no-anim-status-leave-to {
+  opacity: 1;
+  transform: none;
+}
+.no-anim-board-move,
+.no-anim-board-enter-active,
+.no-anim-board-leave-active {
+  transition: none;
+}
+.no-anim-board-enter-from,
+.no-anim-board-leave-to {
+  opacity: 1;
+  transform: none;
+}
+.no-anim-filter-sidebar-enter-active,
+.no-anim-filter-sidebar-leave-active {
+  transition: none;
+}
+.no-anim-filter-sidebar-enter-from,
+.no-anim-filter-sidebar-leave-to {
+  opacity: 1;
+}
+.no-anim-filter-sidebar-enter-from .filter-sidebar-panel,
+.no-anim-filter-sidebar-leave-to .filter-sidebar-panel {
+  transform: none;
 }
 </style>

@@ -17,6 +17,7 @@ import { useRefreshCountdown } from "@/composables/useRefreshCountdown";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/lib/settings";
 import type { Project } from "@/lib/types";
 import Form from "@/components/Form.vue";
+import SidebarNotesList from "@/components/SidebarNotesList.vue";
 
 const { t } = useI18n();
 const { settings } = useSettings();
@@ -131,7 +132,7 @@ function projectInitials(name: string): string {
     </div>
 
     <!-- Project list -->
-    <div class="flex-1 overflow-y-auto px-2">
+    <div class="min-h-0 flex-1 overflow-y-auto px-2">
       <div
         v-if="loading"
         v-show="!collapsed"
@@ -322,6 +323,14 @@ function projectInitials(name: string): string {
           {{ t("sidebar.noProjects") }}
         </div>
       </template>
+    </div>
+
+    <!-- Notes section (local org only, not collapsed) -->
+    <div
+      v-if="!isRemote && !collapsed"
+      class="flex min-h-0 flex-1 flex-col border-t border-foreground/10 bg-muted/20"
+    >
+      <SidebarNotesList @select="emit('select', '__notes__')" />
     </div>
 
     <!-- Create project modal -->

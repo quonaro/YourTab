@@ -11,6 +11,7 @@ import AgileBoard from "@/components/AgileBoard.vue";
 import ProjectSidebar from "@/components/ProjectSidebar.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import QuickLinks from "@/components/QuickLinks.vue";
+import SidebarNotes from "@/components/SidebarNotes.vue";
 import type { Project } from "@/lib/types";
 
 const { t } = useI18n();
@@ -37,6 +38,11 @@ function persistLocation() {
 function tryRestoreProject() {
   if (!pendingProject.value) return;
   const slug = pendingProject.value;
+  if (slug === "__notes__") {
+    selectedProject.value = slug;
+    pendingProject.value = null;
+    return;
+  }
   const exists = sidebarProjects.value.some((p) => p.slug === slug);
   if (exists) {
     selectedProject.value = slug;
@@ -49,7 +55,11 @@ onMounted(async () => {
   const saved = readLastLocation();
   isRestoring.value = true;
   selectedOrg.value = saved.org ?? "local";
-  await orgData.seedIfEmpty();
+  if (import.meta.env.DEV) {
+    await orgData.seedDevIfEmpty();
+  } else {
+    await orgData.seedIfEmpty();
+  }
   await orgData.loadProjects();
   isRestoring.value = false;
   if (saved.project) {
@@ -100,7 +110,15 @@ watch(sidebarProjects, () => {
   }
 });
 
-const showBoard = computed(() => selectedOrg.value && selectedProject.value);
+const showNotes = computed(
+  () => selectedProject.value === "__notes__" && orgType.value === "local",
+);
+const showBoard = computed(
+  () =>
+    !!selectedOrg.value &&
+    !!selectedProject.value &&
+    selectedProject.value !== "__notes__",
+);
 
 const orgReadOnly = computed(() => breadcrumbsRef.value?.readOnly ?? false);
 
@@ -120,6 +138,7 @@ function handleDeleteProject(id: number) {
 <template>
   <div
     class="flex flex-col bg-background text-foreground"
+    :class="{ 'animations-disabled': !settings.animationsEnabled }"
     :style="{
       zoom: settings.uiScale / 100,
       height: `calc(100vh / ${settings.uiScale / 100})`,
@@ -158,7 +177,7 @@ function handleDeleteProject(id: number) {
         @delete="handleDeleteProject"
       />
 
-      <!-- Main content: board -->
+      <!-- Main content: board or notes -->
       <main class="flex-1 overflow-hidden">
         <AgileBoard
           v-if="showBoard"
@@ -167,6 +186,7 @@ function handleDeleteProject(id: number) {
           :read-only="orgReadOnly"
           :org-type="orgType"
         />
+        <SidebarNotes v-else-if="showNotes" />
         <div
           v-else
           class="flex h-full items-center justify-center text-muted-foreground"

@@ -26,6 +26,7 @@ declare global {
   const useAuth: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useAuth')['useAuth']
   const useI18n: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useI18n')['useI18n']
   const useLocalApi: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useLocalApi')['useLocalApi']
+  const useNotes: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes')['useNotes']
   const useOrgData: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useOrgData')['useOrgData']
   const useRefreshCountdown: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useRefreshCountdown')['useRefreshCountdown']
   const useSettings: typeof import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useSettings')['useSettings']
@@ -34,6 +35,9 @@ declare global {
 }
 // for type re-export
 declare global {
+  // @ts-ignore
+  export type { Note } from '/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes'
+  import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes')
   // @ts-ignore
   export type { OrgType, OrgEntry } from '/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useOrgData'
   import('/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useOrgData')

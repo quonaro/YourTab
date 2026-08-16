@@ -152,6 +152,10 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     if (isLocal.value) return localApi.seedIfEmpty();
   }
 
+  async function seedDevIfEmpty(): Promise<void> {
+    if (isLocal.value) return localApi.seedDevIfEmpty();
+  }
+
   return {
     isLocal,
     projects: localApi.projects,
@@ -177,5 +181,6 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     dragTask,
     reorderTasks,
     seedIfEmpty,
+    seedDevIfEmpty,
   };
 }
