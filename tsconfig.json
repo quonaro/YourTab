@@ -16,6 +16,12 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.vue", ".wxt/types/imports.d.ts", ".wxt/wxt.d.ts"],
-  "exclude": ["node_modules", "dist", ".output"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.vue",
+    ".wxt/types/imports.d.ts",
+    ".wxt/wxt.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".output", "vitest.config.ts", "tests"]
 }

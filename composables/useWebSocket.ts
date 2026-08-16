@@ -9,6 +9,7 @@ export interface WSMessage {
 
 type MessageCallback = (msg: WSMessage) => void;
 
+// Module-level singleton state — single WebSocket connection shared across all useWebSocket() callers.
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let pingTimer: ReturnType<typeof setInterval> | null = null;

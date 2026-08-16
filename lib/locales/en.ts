@@ -51,6 +51,8 @@ export default {
     editBoard: "Edit board",
     editStatus: "Edit status",
     deleteStatus: "Delete status",
+    statusActions: "Status actions",
+    boardActions: "Board actions",
     deleteStatusConfirm: "Delete this status?",
     statusName: "Status name",
     statusColor: "Color",

@@ -5,6 +5,7 @@ import type { TokenData } from "@/lib/types";
 
 const TOKEN_STORAGE_KEY = "yourtask-tokens";
 
+// Module-level singleton state — shared across all useAuth() callers in the same page.
 const tokens = ref<TokenData | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);

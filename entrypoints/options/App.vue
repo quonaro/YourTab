@@ -4,6 +4,7 @@ import { IconDownload, IconUpload, IconLoader2 } from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
+import { ensureHostPermission } from "@/lib/config";
 import type { Language } from "@/lib/settings";
 import {
   exportAllData,
@@ -23,6 +24,7 @@ const language = ref<Language>("ru");
 const uiScale = ref(75);
 const animationsEnabled = ref(true);
 const saved = ref(false);
+const permError = ref("");
 
 onMounted(async () => {
   apiDomain.value = settings.value.apiDomain;
@@ -33,8 +35,17 @@ onMounted(async () => {
   animationsEnabled.value = settings.value.animationsEnabled;
 });
 
-function handleSave() {
-  settings.value.apiDomain = apiDomain.value;
+async function handleSave() {
+  permError.value = "";
+  const domain = apiDomain.value.trim().replace(/\/+$/, "");
+  if (domain && domain !== settings.value.apiDomain) {
+    const granted = await ensureHostPermission(domain);
+    if (!granted) {
+      permError.value = "Permission denied for this domain";
+      return;
+    }
+  }
+  settings.value.apiDomain = domain;
   settings.value.theme = theme.value;
   settings.value.accent = accent.value as any;
   settings.value.language = language.value;
@@ -113,6 +124,12 @@ async function handleImportFile(event: Event) {
             :placeholder="t('options.apiDomainPlaceholder')"
           />
           <p class="form-hint mt-1">{{ t("options.apiDomainHint") }}</p>
+          <p
+            v-if="permError"
+            class="mt-1 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {{ permError }}
+          </p>
         </div>
 
         <div>

@@ -297,6 +297,10 @@ watch(
 );
 
 setupAutoRefresh(silentRefresh);
+defineExpose({
+  openCreateStatusModal: () => statusModalsRef.value?.openCreateModal(),
+  openCreateBoardModal: () => boardModalsRef.value?.openCreateModal(),
+});
 </script>
 
 <template>

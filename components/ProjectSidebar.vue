@@ -28,6 +28,7 @@ const props = defineProps<{
   selectedProject: string | null;
   loading?: boolean;
   canCreate?: boolean;
+  canEdit?: boolean;
   isRemote?: boolean;
 }>();
 
@@ -127,7 +128,7 @@ function projectInitials(name: string): string {
         :title="t('sidebar.createProject')"
         @click="showCreateForm = !showCreateForm"
       >
-        <IconPlus :size="16" />
+        <IconPlus :size="16" aria-hidden="true" />
       </button>
     </div>
 
@@ -175,14 +176,20 @@ function projectInitials(name: string): string {
               p.name
             }}</span>
             <IconPencil
-              v-if="canCreate && !collapsed"
+              v-if="(canCreate || canEdit) && !collapsed"
               :size="13"
+              role="button"
+              tabindex="0"
+              :aria-label="t('sidebar.editProject')"
               class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
               @click="(e) => startEdit(e, p)"
             />
             <IconTrash
-              v-if="canCreate && !collapsed"
+              v-if="(canCreate || canEdit) && !collapsed"
               :size="13"
+              role="button"
+              tabindex="0"
+              :aria-label="t('sidebar.deleteConfirmTitle')"
               class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
               @click="(e) => handleDelete(e, p)"
             />
@@ -238,14 +245,20 @@ function projectInitials(name: string): string {
                   p.name
                 }}</span>
                 <IconPencil
-                  v-if="canCreate && !collapsed"
+                  v-if="canEdit && !collapsed"
                   :size="13"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="t('sidebar.editProject')"
                   class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
                   @click="(e) => startEdit(e, p)"
                 />
                 <IconTrash
-                  v-if="canCreate && !collapsed"
+                  v-if="canEdit && !collapsed"
                   :size="13"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="t('sidebar.deleteConfirmTitle')"
                   class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
                   @click="(e) => handleDelete(e, p)"
                 />
@@ -300,14 +313,20 @@ function projectInitials(name: string): string {
                   p.name
                 }}</span>
                 <IconPencil
-                  v-if="canCreate && !collapsed"
+                  v-if="canEdit && !collapsed"
                   :size="13"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="t('sidebar.editProject')"
                   class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
                   @click="(e) => startEdit(e, p)"
                 />
                 <IconTrash
-                  v-if="canCreate && !collapsed"
+                  v-if="canEdit && !collapsed"
                   :size="13"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="t('sidebar.deleteConfirmTitle')"
                   class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
                   @click="(e) => handleDelete(e, p)"
                 />

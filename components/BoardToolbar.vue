@@ -46,16 +46,23 @@ const emit = defineEmits<{
         <input
           :value="searchQuery"
           type="text"
+          data-keyboard-shortcut="search"
           class="input-base h-9 w-48 pl-8 text-sm"
           :placeholder="t('boardFilters.searchPlaceholder')"
-          @input="emit('update:search-query', ($event.target as HTMLInputElement).value)"
+          @input="
+            emit(
+              'update:search-query',
+              ($event.target as HTMLInputElement).value,
+            )
+          "
         />
         <button
           v-if="searchQuery"
           class="absolute right-2 text-muted-foreground transition hover:text-foreground"
+          :aria-label="t('boardFilters.clear')"
           @click="emit('update:search-query', '')"
         >
-          <IconX :size="14" />
+          <IconX :size="14" aria-hidden="true" />
         </button>
       </div>
 
@@ -65,7 +72,7 @@ const emit = defineEmits<{
         class="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 text-sm font-medium text-destructive transition hover:bg-destructive/20"
         @click="emit('clear-filters')"
       >
-        <IconX :size="15" />
+        <IconX :size="15" aria-hidden="true" />
         {{ t("boardFilters.clear") }}
       </button>
 
@@ -74,7 +81,7 @@ const emit = defineEmits<{
         class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         @click="emit('open-filters')"
       >
-        <IconAdjustmentsHorizontal :size="15" />
+        <IconAdjustmentsHorizontal :size="15" aria-hidden="true" />
         {{ t("boardFilters.button") }}
         <span
           v-if="activeFilterCount > 0"
@@ -98,7 +105,7 @@ const emit = defineEmits<{
           :title="t('board.zoomOutColumns')"
           @click="emit('zoom-out')"
         >
-          <IconMinus :size="16" />
+          <IconMinus :size="16" aria-hidden="true" />
         </button>
         <span
           class="min-w-[3ch] text-center text-xs font-medium text-muted-foreground"
@@ -113,7 +120,7 @@ const emit = defineEmits<{
           :title="t('board.zoomInColumns')"
           @click="emit('zoom-in')"
         >
-          <IconPlus :size="16" />
+          <IconPlus :size="16" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -127,7 +134,7 @@ const emit = defineEmits<{
         class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         @click="emit('create-status')"
       >
-        <IconColumns3 :size="15" />
+        <IconColumns3 :size="15" aria-hidden="true" />
         {{ t("board.createColumn") }}
       </button>
       <button
@@ -135,7 +142,7 @@ const emit = defineEmits<{
         class="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         @click="emit('create-board')"
       >
-        <IconLayoutGrid :size="15" />
+        <IconLayoutGrid :size="15" aria-hidden="true" />
         {{ t("board.createBoard") }}
       </button>
     </div>

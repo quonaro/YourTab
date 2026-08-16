@@ -5,6 +5,7 @@ import ru from "@/lib/locales/ru";
 
 const messages = { en, ru } as const;
 
+// Module-level singleton state — shared across all useI18n() callers in the same page.
 const currentLanguage = ref<Language>(readSettings().language);
 
 export function setLanguage(lang: Language) {

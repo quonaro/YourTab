@@ -43,7 +43,7 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     isEnd = false,
   ): Promise<TaskStatus> {
     if (isLocal.value) return localApi.createStatus(projectSlug, name, color, position, isEnd);
-    throw new Error("Remote status creation not implemented");
+    return remoteApi.createStatus(projectSlug, name, color, position, isEnd);
   }
 
   async function updateStatus(
@@ -55,12 +55,15 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
     isEnd = false,
   ): Promise<TaskStatus> {
     if (isLocal.value) return localApi.updateStatus(projectSlug, statusId, name, color, position, isEnd);
-    throw new Error("Remote status update not implemented");
+    return remoteApi.updateStatus(projectSlug, statusId, { name, color, isEnd, position });
   }
 
   async function deleteStatus(projectSlug: string, statusId: number): Promise<void> {
     if (isLocal.value) return localApi.deleteStatus(projectSlug, statusId);
-    throw new Error("Remote status deletion not implemented");
+    const statuses = await remoteApi.getStatuses(projectSlug);
+    const fallback = statuses.find((s) => s.id !== statusId);
+    if (!fallback) throw new Error("Cannot delete the only remaining status");
+    await remoteApi.deleteStatus(projectSlug, statusId, fallback.id);
   }
 
   async function updateTask(
@@ -102,17 +105,17 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
 
   async function createBoard(projectSlug: string, name: string): Promise<Board> {
     if (isLocal.value) return localApi.createBoard(projectSlug, name);
-    throw new Error("Remote board creation not implemented");
+    return remoteApi.createBoard(projectSlug, name, 0);
   }
 
   async function updateBoard(projectSlug: string, boardId: number, name: string): Promise<Board> {
     if (isLocal.value) return localApi.updateBoard(projectSlug, boardId, name);
-    throw new Error("Remote board update not implemented");
+    return remoteApi.updateBoard(projectSlug, boardId, name);
   }
 
   async function deleteBoard(projectSlug: string, boardId: number): Promise<void> {
     if (isLocal.value) return localApi.deleteBoard(projectSlug, boardId);
-    throw new Error("Remote board deletion not implemented");
+    await remoteApi.deleteBoard(projectSlug, boardId);
   }
 
   async function dragTask(
@@ -135,17 +138,20 @@ export function useOrgData(orgType: Ref<OrgType>, _orgSlug: Ref<string | null>) 
 
   async function createProject(name: string): Promise<Project> {
     if (isLocal.value) return localApi.createProject(name);
-    throw new Error("Remote project creation not implemented");
+    // Remote project creation is handled via the web app, not the extension API
+    throw new Error("Remote project creation is not available in the extension");
   }
 
-  async function updateProject(id: number, name: string): Promise<Project> {
+  async function updateProject(id: number, name: string, slug?: string): Promise<Project> {
     if (isLocal.value) return localApi.updateProject(id, name);
-    throw new Error("Remote project update not implemented");
+    if (!slug) throw new Error("Project slug is required for remote update");
+    return remoteApi.updateProject(slug, name);
   }
 
-  async function deleteProject(id: number): Promise<void> {
+  async function deleteProject(id: number, slug?: string): Promise<void> {
     if (isLocal.value) return localApi.deleteProject(id);
-    throw new Error("Remote project deletion not implemented");
+    if (!slug) throw new Error("Project slug is required for remote deletion");
+    await remoteApi.deleteProject(slug);
   }
 
   async function seedIfEmpty(): Promise<void> {

@@ -7,7 +7,8 @@ export default defineConfig({
     description: "YourTab agile board in your new tab",
     version: "0.1.0",
     permissions: ["storage", "identity"],
-    host_permissions: ["https://*/*"],
+    host_permissions: ["https://yourtask.app/*"],
+    optional_host_permissions: ["https://*/*"],
     chrome_url_overrides: {
       newtab: "newtab.html",
     },

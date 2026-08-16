@@ -102,6 +102,8 @@ function tasksForCell(statusId: number): Task[] {
           v-if="!readOnly && orgType === 'local'"
           :data-board-trigger="board.id"
           draggable="false"
+          :aria-label="t('board.boardActions')"
+          aria-haspopup="true"
           class="relative shrink-0 rounded p-1 text-muted-foreground/60 transition hover:bg-muted hover:text-foreground"
           @click.stop="emit('toggle-board-menu', board.id)"
         >
@@ -178,14 +180,14 @@ function tasksForCell(statusId: number): Task[] {
           class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
           @click.stop="emit('start-edit-board', board)"
         >
-          <IconPencil :size="13" />
+          <IconPencil :size="13" aria-hidden="true" />
           {{ t("board.editBoard") }}
         </button>
         <button
           class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
           @click.stop="emit('start-delete-board', board)"
         >
-          <IconTrash :size="13" />
+          <IconTrash :size="13" aria-hidden="true" />
           {{ t("board.deleteBoard") }}
         </button>
       </div>

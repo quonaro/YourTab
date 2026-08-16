@@ -61,7 +61,7 @@ export function useBoardFilters(opts: UseBoardFiltersOptions) {
       .filter((s) => !s.isArchived)
       .map((s) => ({
         value: s.id,
-        label: s.isOrgSprint ? `${s.name}` : s.name,
+        label: s.name,
       })),
   );
 

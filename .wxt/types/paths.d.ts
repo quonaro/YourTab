@@ -4,6 +4,7 @@ import "wxt/browser";
 declare module "wxt/browser" {
   export type PublicPath =
     | "/"
+    | "/background.js"
     | "/fonts/stetica/black.otf"
     | "/fonts/stetica/bold-italic.otf"
     | "/fonts/stetica/bold.otf"

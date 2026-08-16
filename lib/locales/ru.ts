@@ -51,6 +51,8 @@ export default {
     editBoard: "Изменить доску",
     editStatus: "Изменить статус",
     deleteStatus: "Удалить статус",
+    statusActions: "Действия со статусом",
+    boardActions: "Действия с доской",
     deleteStatusConfirm: "Удалить этот статус?",
     statusName: "Название статуса",
     statusColor: "Цвет",

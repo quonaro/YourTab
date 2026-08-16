@@ -48,6 +48,9 @@ const emit = defineEmits<{
         v-for="(status, idx) in statuses"
         :key="status.id"
         :data-status-id="status.id"
+        role="button"
+        tabindex="0"
+        :aria-label="status.name"
         class="relative flex shrink-0 cursor-grab items-center gap-2 bg-muted px-3 py-2 text-foreground transition-opacity active:cursor-grabbing"
         :class="[
           idx === 0
@@ -79,6 +82,8 @@ const emit = defineEmits<{
           v-if="!readOnly && !isRemote"
           :data-status-trigger="status.id"
           draggable="false"
+          :aria-label="t('board.statusActions')"
+          aria-haspopup="true"
           class="rounded p-1 text-muted-foreground/60 hover:bg-muted hover:text-foreground"
           @click.stop="emit('toggle-status-menu', status.id)"
         >
@@ -102,16 +107,26 @@ const emit = defineEmits<{
     >
       <button
         class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 transition hover:bg-muted"
-        @click.stop="emit('start-edit-status', statuses.find((s) => s.id === statusActionsOpen)!)"
+        @click.stop="
+          emit(
+            'start-edit-status',
+            statuses.find((s) => s.id === statusActionsOpen)!,
+          )
+        "
       >
-        <IconPencil :size="13" />
+        <IconPencil :size="13" aria-hidden="true" />
         {{ t("board.editStatus") }}
       </button>
       <button
         class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive transition hover:bg-destructive/10"
-        @click.stop="emit('start-delete-status', statuses.find((s) => s.id === statusActionsOpen)!)"
+        @click.stop="
+          emit(
+            'start-delete-status',
+            statuses.find((s) => s.id === statusActionsOpen)!,
+          )
+        "
       >
-        <IconTrash :size="13" />
+        <IconTrash :size="13" aria-hidden="true" />
         {{ t("board.deleteStatus") }}
       </button>
     </div>

@@ -3,6 +3,7 @@ import { useWebSocket } from "./useWebSocket";
 
 const FALLBACK_INTERVAL = 30; // seconds
 
+// Module-level singleton state — single refresh countdown shared across all useRefreshCountdown() callers.
 const nextRefreshIn = ref(0);
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 let countdownTimer: ReturnType<typeof setInterval> | null = null;

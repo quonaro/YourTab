@@ -12,6 +12,8 @@ import ProjectSidebar from "@/components/ProjectSidebar.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import QuickLinks from "@/components/QuickLinks.vue";
 import SidebarNotes from "@/components/SidebarNotes.vue";
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
+import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
 import type { Project } from "@/lib/types";
 
 const { t } = useI18n();
@@ -127,12 +129,24 @@ function handleCreateProject(name: string) {
 }
 
 function handleEditProject(id: number, name: string) {
-  orgData.updateProject(id, name);
+  const project = sidebarProjects.value.find((p) => p.id === id);
+  orgData.updateProject(id, name, project?.slug);
 }
 
 function handleDeleteProject(id: number) {
-  orgData.deleteProject(id);
+  const project = sidebarProjects.value.find((p) => p.id === id);
+  orgData.deleteProject(id, project?.slug);
 }
+
+const agileBoardRef = ref<InstanceType<typeof AgileBoard> | null>(null);
+
+useKeyboardShortcuts({
+  settingsOpen,
+  onEscape: () => {},
+  onCreateStatus: () => agileBoardRef.value?.openCreateStatusModal(),
+  onCreateBoard: () => agileBoardRef.value?.openCreateBoardModal(),
+  canCreate: () => orgType.value === "local" && showBoard.value,
+});
 </script>
 
 <template>
@@ -171,6 +185,7 @@ function handleDeleteProject(id: number) {
         :loading="orgType === 'local' && orgData.projectsLoading.value"
         :can-create="orgType === 'local'"
         :is-remote="orgType === 'remote'"
+        :can-edit="orgType === 'remote' && !orgReadOnly"
         @select="selectedProject = $event"
         @create="handleCreateProject"
         @edit="handleEditProject"
@@ -179,20 +194,23 @@ function handleDeleteProject(id: number) {
 
       <!-- Main content: board or notes -->
       <main class="flex-1 overflow-hidden">
-        <AgileBoard
-          v-if="showBoard"
-          :org-slug="selectedOrg!"
-          :project-slug="selectedProject!"
-          :read-only="orgReadOnly"
-          :org-type="orgType"
-        />
-        <SidebarNotes v-else-if="showNotes" />
-        <div
-          v-else
-          class="flex h-full items-center justify-center text-muted-foreground"
-        >
-          {{ t("main.selectPrompt") }}
-        </div>
+        <ErrorBoundary>
+          <AgileBoard
+            ref="agileBoardRef"
+            v-if="showBoard"
+            :org-slug="selectedOrg!"
+            :project-slug="selectedProject!"
+            :read-only="orgReadOnly"
+            :org-type="orgType"
+          />
+          <SidebarNotes v-else-if="showNotes" />
+          <div
+            v-else
+            class="flex h-full items-center justify-center text-muted-foreground"
+          >
+            {{ t("main.selectPrompt") }}
+          </div>
+        </ErrorBoundary>
       </main>
     </div>
 

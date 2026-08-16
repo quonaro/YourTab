@@ -51,11 +51,7 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
   );
 }
 
-function txAll<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T[]>): Promise<T[]> {
-  return tx(store, mode, fn);
-}
-
-function slugify(name: string): string {
+export function slugify(name: string): string {
   const map: Record<string, string> = {
     а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y",
     к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f",
@@ -70,42 +66,41 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, "") || "project";
 }
 
-async function nextId(store: string): Promise<number> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(store, "readonly");
-    const req = transaction.objectStore(store).count();
-    req.onsuccess = () => resolve(req.result + 1);
-    req.onerror = () => reject(req.error);
-  });
+async function getUniqueSlug(baseSlug: string, excludeId?: number): Promise<string> {
+  const projects = await listProjects();
+  const existing = new Set(projects.filter((p) => p.id !== excludeId).map((p) => p.slug));
+  if (!existing.has(baseSlug)) return baseSlug;
+  let suffix = 2;
+  while (existing.has(`${baseSlug}-${suffix}`)) suffix++;
+  return `${baseSlug}-${suffix}`;
 }
 
 // ─── Projects ───
 
 export async function createProject(name: string, description?: string): Promise<Project> {
-  const id = await nextId("projects");
-  const slug = slugify(name);
-  const project: Project = {
-    id,
+  const slug = await getUniqueSlug(slugify(name));
+  const createdAt = new Date().toISOString();
+  const record = {
     slug,
     name,
     description,
     organizationId: 0,
-    createdAt: new Date().toISOString(),
+    createdAt,
   };
-  await tx("projects", "readwrite", (s) => s.add(project));
+  const id = Number(await tx("projects", "readwrite", (s) => s.add(record)));
+  const project: Project = { id, slug, name, description, organizationId: 0, createdAt };
 
   // Initialize default statuses and board (mirrors backend InitializeProject)
   await createStatus(project.id, "To Do", "#6b7280", 0);
   await createStatus(project.id, "In Progress", "#3b82f6", 1);
   await createStatus(project.id, "Done", "#10b981", 2, true);
-  await createBoard(project.id, "Основная доска", 0);
+  await createBoard(project.id, "Main Board", 0);
 
   return project;
 }
 
 export async function listProjects(): Promise<Project[]> {
-  return txAll<Project>("projects", "readonly", (s) => s.getAll() as IDBRequest<Project[]>);
+  return tx<Project[]>("projects", "readonly", (s) => s.getAll() as IDBRequest<Project[]>);
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -120,6 +115,7 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
 }
 
 export async function updateProject(id: number, name: string, description?: string): Promise<Project> {
+  const slug = await getUniqueSlug(slugify(name), id);
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("projects", "readwrite");
@@ -135,7 +131,7 @@ export async function updateProject(id: number, name: string, description?: stri
         ...existing,
         name,
         description,
-        slug: slugify(name),
+        slug,
       };
       store.put(updated);
       transaction.oncomplete = () => resolve(updated);
@@ -189,9 +185,9 @@ export async function createStatus(
   position: number,
   isEnd = false,
 ): Promise<TaskStatus> {
-  const id = await nextId("statuses");
+  const record = { name, color, isEnd, position, projectId };
+  const id = Number(await tx("statuses", "readwrite", (s) => s.add(record)));
   const status: TaskStatus = { id, name, color, isEnd, position };
-  await tx("statuses", "readwrite", (s) => s.add({ ...status, projectId }));
   return status;
 }
 
@@ -255,28 +251,43 @@ export async function createTask(
   statusId: number,
   boardId?: number,
 ): Promise<Task> {
-  const id = await nextId("tasks");
   const now = new Date().toISOString();
 
   // Look up the status to include it in the returned task
   const statuses = await listStatuses(projectId);
   const status = statuses.find((s) => s.id === statusId);
 
-  const task: Task = {
-    id,
-    shortId: `L-${id}`,
+  const order = Date.now();
+  const record = {
+    shortId: "",
     title,
     priority: 1,
     archived: false,
-    order: Date.now(),
-    boardId,
+    order,
+    boardId: boardId ?? null,
+    statusId,
+    projectId,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const id = Number(await tx("tasks", "readwrite", (s) => s.add(record)));
+  const shortId = `L-${id}`;
+  await tx("tasks", "readwrite", (s) => s.put({ ...record, id, shortId }));
+
+  const task: Task = {
+    id,
+    shortId,
+    title,
+    priority: 1,
+    archived: false,
+    order,
+    boardId: boardId ?? undefined,
     status: status
       ? { id: status.id, name: status.name, color: status.color, isEnd: status.isEnd, position: status.position }
       : undefined,
     createdAt: now,
     updatedAt: now,
   };
-  await tx("tasks", "readwrite", (s) => s.add({ ...task, projectId, statusId, boardId: boardId ?? null }));
   return task;
 }
 
@@ -376,9 +387,9 @@ export async function createBoard(
   name: string,
   position: number,
 ): Promise<Board> {
-  const id = await nextId("boards");
+  const record = { name, position, projectId };
+  const id = Number(await tx("boards", "readwrite", (s) => s.add(record)));
   const board: Board = { id, name, position };
-  await tx("boards", "readwrite", (s) => s.add({ ...board, projectId }));
   return board;
 }
 
@@ -405,7 +416,7 @@ export async function listBoards(projectId: number): Promise<Board[]> {
 export async function ensureDefaultBoard(projectId: number): Promise<void> {
   const existing = await listBoards(projectId);
   if (existing.length > 0) return;
-  await createBoard(projectId, "Основная доска", 0);
+  await createBoard(projectId, "Main Board", 0);
 }
 
 export async function updateBoard(

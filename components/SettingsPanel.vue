@@ -18,6 +18,7 @@ import { useSettings } from "@/composables/useSettings";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n, setLanguage } from "@/composables/useI18n";
 import { useAuth } from "@/composables/useAuth";
+import { ensureHostPermission } from "@/lib/config";
 import type { Language } from "@/lib/settings";
 
 const { t } = useI18n();
@@ -41,6 +42,7 @@ const language = ref<Language>("ru");
 const uiScale = ref(75);
 const animationsEnabled = ref(true);
 const saved = ref(false);
+const permError = ref("");
 
 onMounted(() => {
   apiDomain.value = settings.value.apiDomain;
@@ -70,8 +72,14 @@ function handleSave() {
 }
 
 async function handleConnect() {
+  permError.value = "";
   const url = apiDomain.value.trim().replace(/\/+$/, "");
   if (url) {
+    const granted = await ensureHostPermission(url);
+    if (!granted) {
+      permError.value = "Permission denied for this domain";
+      return;
+    }
     settings.value.apiDomain = url;
     saveSettings();
   }
@@ -204,10 +212,10 @@ async function handleImportFile(event: Event) {
             }}
           </button>
           <div
-            v-if="authError"
+            v-if="authError || permError"
             class="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive"
           >
-            {{ authError }}
+            {{ permError || authError }}
           </div>
         </div>
       </section>

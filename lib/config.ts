@@ -33,3 +33,31 @@ export function getOAuthClientId(): string {
 export function getRedirectURI(): string {
   return chrome.identity.getRedirectURL("callback");
 }
+
+const DEFAULT_HOST_PERMISSIONS = ["https://yourtask.app/*"];
+
+export async function ensureHostPermission(domain: string): Promise<boolean> {
+  const d = domain.toLowerCase().trim();
+  if (!d) return true;
+
+  const isLocal =
+    d === "localhost" ||
+    d.startsWith("localhost:") ||
+    d === "127.0.0.1" ||
+    d.startsWith("127.0.0.1:");
+
+  const protocol = isLocal ? "http" : "https";
+  const host = d.replace(/^https?:\/\//, "");
+  const pattern = `${protocol}://${host}/*`;
+
+  if (DEFAULT_HOST_PERMISSIONS.includes(pattern)) return true;
+
+  try {
+    const granted = await chrome.permissions.request({
+      origins: [pattern],
+    });
+    return granted;
+  } catch {
+    return false;
+  }
+}

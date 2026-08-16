@@ -345,15 +345,12 @@ function openChildTask(child: ChildTaskInfo, e: MouseEvent) {
       </span>
 
       <!-- Avatars -->
-      <div
-        v-if="displayedUsers.length"
-        class="ml-auto flex items-center"
-        style="gap: -4px"
-      >
+      <div v-if="displayedUsers.length" class="ml-auto flex items-center">
         <div
           v-for="(user, idx) in displayedUsers"
           :key="user.id"
           class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-medium text-primary ring-2 ring-card"
+          :class="{ '-ml-2': idx > 0 }"
           :style="{ zIndex: displayedUsers.length - idx }"
         >
           {{ userInitials(user) }}

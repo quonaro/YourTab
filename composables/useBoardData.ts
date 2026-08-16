@@ -77,12 +77,26 @@ export function useBoardData(opts: UseBoardDataOptions) {
 
       const sortedStatuses = statusList.sort((a, b) => a.position - b.position);
       if (
-        JSON.stringify(sortedStatuses) !== JSON.stringify(opts.statuses.value)
+        sortedStatuses.length !== opts.statuses.value.length ||
+        sortedStatuses.some(
+          (s, i) => {
+            const o = opts.statuses.value[i];
+            return !o || o.id !== s.id || o.name !== s.name || o.color !== s.color || o.isEnd !== s.isEnd || o.position !== s.position;
+          },
+        )
       ) {
         opts.statuses.value = sortedStatuses;
       }
 
-      if (JSON.stringify(boardList) !== JSON.stringify(opts.boards.value)) {
+      if (
+        boardList.length !== opts.boards.value.length ||
+        boardList.some(
+          (b, i) => {
+            const o = opts.boards.value[i];
+            return !o || o.id !== b.id || o.name !== b.name || o.position !== b.position;
+          },
+        )
+      ) {
         opts.boards.value = boardList;
       }
     } catch {

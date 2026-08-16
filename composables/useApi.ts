@@ -30,6 +30,13 @@ const AUTH_ERRORS = new Set([
 export function useApi() {
   const { getValidAccessToken, refreshTokens, tokens, logout } = useAuth();
 
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 500;
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
     let token = await getValidAccessToken();
     if (!token) {
@@ -42,23 +49,46 @@ export function useApi() {
       ...options.headers,
     };
 
-    let response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
+    let response: Response | null = null;
 
-    // Retry on expired/invalid access token
-    if (response.status === 401 || response.status === 403) {
-      const body = await response.json().catch(() => ({}));
-      if (AUTH_ERRORS.has(body.detail)) {
-        const refreshed = await refreshTokens();
-        if (refreshed && tokens.value) {
-          token = tokens.value.accessToken;
-          headers["Authorization"] = `Bearer ${token}`;
-          response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
-        } else {
-          logout();
-          throw new Error("Session expired");
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
+      } catch (err) {
+        // Network error — retry with backoff
+        if (attempt < MAX_RETRIES) {
+          await sleep(BASE_DELAY * 2 ** attempt);
+          continue;
+        }
+        throw new Error(err instanceof Error ? err.message : "Network error");
+      }
+
+      // Retry on expired/invalid access token (only on first attempt)
+      if ((response.status === 401 || response.status === 403) && attempt === 0) {
+        const body = await response.json().catch(() => ({}));
+        if (AUTH_ERRORS.has(body.detail)) {
+          const refreshed = await refreshTokens();
+          if (refreshed && tokens.value) {
+            token = tokens.value.accessToken;
+            headers["Authorization"] = `Bearer ${token}`;
+            continue;
+          } else {
+            logout();
+            throw new Error("Session expired");
+          }
         }
       }
+
+      // Retry on 5xx with backoff
+      if (response.status >= 500 && attempt < MAX_RETRIES) {
+        await sleep(BASE_DELAY * 2 ** attempt);
+        continue;
+      }
+
+      break;
     }
+
+    if (!response) throw new Error("Request failed");
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -194,6 +224,112 @@ export function useApi() {
     });
   }
 
+  async function createStatus(
+    projectSlug: string,
+    name: string,
+    color: string,
+    position: number,
+    isEnd = false,
+  ): Promise<TaskStatus> {
+    const resp = await apiFetch<{ status: TaskStatus }>(
+      `/projects/${projectSlug}/statuses`,
+      {
+        method: "POST",
+        body: JSON.stringify({ name, color, isEnd }),
+      },
+    );
+    return resp.status;
+  }
+
+  async function updateStatus(
+    projectSlug: string,
+    statusId: number,
+    input: { name?: string; color?: string; isEnd?: boolean; position?: number },
+  ): Promise<TaskStatus> {
+    const resp = await apiFetch<{ status: TaskStatus }>(
+      `/projects/${projectSlug}/statuses/${statusId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(input),
+      },
+    );
+    return resp.status;
+  }
+
+  async function deleteStatus(
+    projectSlug: string,
+    statusId: number,
+    moveToStatusId: number,
+  ): Promise<void> {
+    await apiFetch(`/projects/${projectSlug}/statuses/${statusId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ moveToStatusId }),
+    });
+  }
+
+  async function createBoard(
+    projectSlug: string,
+    name: string,
+    _position: number,
+  ): Promise<Board> {
+    const resp = await apiFetch<{ board: Board }>(
+      `/projects/${projectSlug}/boards`,
+      {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      },
+    );
+    return resp.board;
+  }
+
+  async function updateBoard(
+    projectSlug: string,
+    boardId: number,
+    name: string,
+  ): Promise<Board> {
+    const resp = await apiFetch<{ board: Board }>(
+      `/projects/${projectSlug}/boards/${boardId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      },
+    );
+    return resp.board;
+  }
+
+  async function deleteBoard(
+    projectSlug: string,
+    boardId: number,
+    moveToBoardId?: number,
+  ): Promise<void> {
+    await apiFetch(`/projects/${projectSlug}/boards/${boardId}`, {
+      method: "DELETE",
+      body: JSON.stringify(moveToBoardId ? { moveToBoardId } : {}),
+    });
+  }
+
+  async function updateProject(
+    projectSlug: string,
+    name: string,
+    description?: string,
+  ): Promise<Project> {
+    const resp = await apiFetch<Project>(
+      `/projects/${projectSlug}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name, description }),
+      },
+    );
+    return resp;
+  }
+
+  async function deleteProject(projectSlug: string): Promise<void> {
+    await apiFetch(`/projects/${projectSlug}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmName: projectSlug }),
+    });
+  }
+
   return {
     apiFetch,
     getWorkspace,
@@ -207,5 +343,13 @@ export function useApi() {
     getProjectSprints,
     reorderTasks,
     dragTask,
+    createStatus,
+    updateStatus,
+    deleteStatus,
+    createBoard,
+    updateBoard,
+    deleteBoard,
+    updateProject,
+    deleteProject,
   };
 }
