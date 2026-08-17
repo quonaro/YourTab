@@ -28,6 +28,10 @@ export default defineConfig({
     browser_specific_settings: {
       gecko: {
         id: "yourtab@yourtask.app",
+        data_collection_permissions: [],
+      } as {
+        id: string;
+        data_collection_permissions: string[];
       },
     },
   },
