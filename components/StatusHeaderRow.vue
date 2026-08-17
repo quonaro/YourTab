@@ -35,7 +35,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="agile-scroll sticky top-0 z-10 overflow-x-auto bg-background"
+    class="agile-scroll sticky top-0 z-10 min-w-0 shrink-0 overflow-x-auto bg-background"
     @scroll="emit('scroll', $event.target as HTMLElement)"
   >
     <TransitionGroup

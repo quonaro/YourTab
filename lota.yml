@@ -3,6 +3,11 @@ dev:
   script: |
     pnpm dev
 
+build:
+  desc: Build extension
+  script: |
+    pnpm build
+
 push:
   desc: Push to GitHub
   color: cyan

@@ -47,7 +47,7 @@ function pileTasksForCell(statusId: number): Task[] {
 <template>
   <div class="flex flex-col gap-2">
     <div
-      class="agile-scroll agile-row-scroll overflow-x-auto"
+      class="agile-scroll agile-row-scroll min-w-0 overflow-x-auto"
       @scroll="emit('scroll', $event.target as HTMLElement)"
     >
       <button
@@ -68,7 +68,7 @@ function pileTasksForCell(statusId: number): Task[] {
     </div>
     <div
       v-show="!collapsed"
-      class="agile-scroll agile-row-scroll overflow-x-auto"
+      class="agile-scroll agile-row-scroll min-w-0 overflow-x-auto"
       @scroll="emit('scroll', $event.target as HTMLElement)"
     >
       <div

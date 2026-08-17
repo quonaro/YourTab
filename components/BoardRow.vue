@@ -72,7 +72,7 @@ function tasksForCell(statusId: number): Task[] {
   >
     <!-- Board header -->
     <div
-      class="agile-scroll agile-row-scroll overflow-x-auto"
+      class="agile-scroll agile-row-scroll min-w-0 overflow-x-auto"
       @scroll="emit('scroll', $event.target as HTMLElement)"
     >
       <div
@@ -115,7 +115,7 @@ function tasksForCell(statusId: number): Task[] {
     <!-- Board cells -->
     <div
       v-show="!collapsed"
-      class="agile-scroll agile-row-scroll overflow-x-auto"
+      class="agile-scroll agile-row-scroll min-w-0 overflow-x-auto"
       @scroll="emit('scroll', $event.target as HTMLElement)"
     >
       <div
