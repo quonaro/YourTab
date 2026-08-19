@@ -318,7 +318,7 @@ function cancelForm() {
 
 <style scoped>
 .dropdown-panel {
-  border: 1px solid hsl(var(--border, 240 5% 90%));
+  border: 1px solid hsl(var(--foreground) / 0.1);
   border-radius: 0.5rem;
   background: hsl(var(--background, 0 0% 100%));
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);

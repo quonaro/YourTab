@@ -17,21 +17,25 @@ interface UseBoardFiltersOptions {
   onDataChanged: () => void;
 }
 
+const FILTERS_STORAGE_KEY = "yourtask-filters";
+
+const defaultFilters: TaskFilters = {
+  search: "",
+  assigneeIds: [],
+  responsibleIds: [],
+  createdByIds: [],
+  tagIds: [],
+  sprintIds: [],
+  priority: null,
+  sort: "default",
+  includeArchived: false,
+};
+
 export function useBoardFilters(opts: UseBoardFiltersOptions) {
   const { t } = useI18n();
 
   const searchQuery = ref("");
-  const filters = ref<TaskFilters>({
-    search: "",
-    assigneeIds: [],
-    responsibleIds: [],
-    createdByIds: [],
-    tagIds: [],
-    sprintIds: [],
-    priority: null,
-    sort: "default",
-    includeArchived: false,
-  });
+  const filters = ref<TaskFilters>({ ...defaultFilters });
   const filterSidebarOpen = ref(false);
   const members = ref<UserInfo[]>([]);
   const tags = ref<TaskTag[]>([]);
@@ -133,17 +137,7 @@ export function useBoardFilters(opts: UseBoardFiltersOptions) {
   }
 
   function clearAllFilters() {
-    filters.value = {
-      search: "",
-      assigneeIds: [],
-      responsibleIds: [],
-      createdByIds: [],
-      tagIds: [],
-      sprintIds: [],
-      priority: null,
-      sort: "default",
-      includeArchived: false,
-    };
+    filters.value = { ...defaultFilters };
     searchQuery.value = "";
     if (opts.isRemote.value) opts.onDataChanged();
   }
@@ -176,26 +170,82 @@ export function useBoardFilters(opts: UseBoardFiltersOptions) {
 
   function resetFilters() {
     searchQuery.value = "";
-    filters.value = {
-      search: "",
-      assigneeIds: [],
-      responsibleIds: [],
-      createdByIds: [],
-      tagIds: [],
-      sprintIds: [],
-      priority: null,
-      sort: "default",
-      includeArchived: false,
-    };
+    filters.value = { ...defaultFilters };
     members.value = [];
     tags.value = [];
     sprints.value = [];
   }
 
+  let isRestoring = false;
+
+  function storageKey() {
+    const slug = opts.projectSlug.value;
+    return slug ? `${FILTERS_STORAGE_KEY}-${slug}` : "";
+  }
+
+  function saveFilters() {
+    const key = storageKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(filters.value));
+    } catch {
+      // ignore
+    }
+  }
+
+  function loadSavedFilters() {
+    isRestoring = true;
+    members.value = [];
+    tags.value = [];
+    sprints.value = [];
+    const key = storageKey();
+    try {
+      if (key) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<TaskFilters>;
+          filters.value = { ...defaultFilters, ...parsed };
+        } else {
+          filters.value = { ...defaultFilters };
+        }
+      } else {
+        filters.value = { ...defaultFilters };
+      }
+      searchQuery.value = filters.value.search ?? "";
+    } catch {
+      filters.value = { ...defaultFilters };
+      searchQuery.value = "";
+    }
+    isRestoring = false;
+  }
+
+  // Persist filters on every change
+  watch(
+    filters,
+    () => {
+      if (!isRestoring) {
+        saveFilters();
+      }
+    },
+    { deep: true },
+  );
+
+  // Load saved filters when project changes
+  watch(
+    () => opts.projectSlug.value,
+    (newSlug, oldSlug) => {
+      if (newSlug !== oldSlug) {
+        loadSavedFilters();
+      }
+    },
+    { immediate: true },
+  );
+
   // Debounced search → backend
   watch(searchQuery, (val) => {
     if (searchDebounce) clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => {
+      if (filters.value.search === val) return;
       filters.value = { ...filters.value, search: val };
       if (opts.isRemote.value) opts.onDataChanged();
     }, 400);

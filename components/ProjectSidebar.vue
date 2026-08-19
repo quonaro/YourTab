@@ -244,24 +244,6 @@ function projectInitials(name: string): string {
                 <span v-if="!collapsed" class="flex-1 truncate text-left">{{
                   p.name
                 }}</span>
-                <IconPencil
-                  v-if="canEdit && !collapsed"
-                  :size="13"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="t('sidebar.editProject')"
-                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-                  @click="(e) => startEdit(e, p)"
-                />
-                <IconTrash
-                  v-if="canEdit && !collapsed"
-                  :size="13"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="t('sidebar.deleteConfirmTitle')"
-                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                  @click="(e) => handleDelete(e, p)"
-                />
               </button>
             </template>
           </div>
@@ -312,24 +294,6 @@ function projectInitials(name: string): string {
                 <span v-if="!collapsed" class="flex-1 truncate text-left">{{
                   p.name
                 }}</span>
-                <IconPencil
-                  v-if="canEdit && !collapsed"
-                  :size="13"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="t('sidebar.editProject')"
-                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-foreground"
-                  @click="(e) => startEdit(e, p)"
-                />
-                <IconTrash
-                  v-if="canEdit && !collapsed"
-                  :size="13"
-                  role="button"
-                  tabindex="0"
-                  :aria-label="t('sidebar.deleteConfirmTitle')"
-                  class="shrink-0 text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
-                  @click="(e) => handleDelete(e, p)"
-                />
               </button>
             </template>
           </div>
@@ -496,7 +460,7 @@ function projectInitials(name: string): string {
 
 <style scoped>
 .dropdown-panel {
-  border: 1px solid hsl(var(--border, 240 5% 90%));
+  border: 1px solid hsl(var(--foreground) / 0.1);
   border-radius: 0.5rem;
   background: hsl(var(--background, 0 0% 100%));
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);

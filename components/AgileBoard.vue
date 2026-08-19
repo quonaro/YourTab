@@ -289,13 +289,6 @@ onUnmounted(() => {
 
 watch(() => props.projectSlug, loadData);
 
-watch(
-  () => props.projectSlug,
-  () => {
-    filters.resetFilters();
-  },
-);
-
 setupAutoRefresh(silentRefresh);
 defineExpose({
   openCreateStatusModal: () => statusModalsRef.value?.openCreateModal(),

@@ -129,3 +129,12 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.dropdown-panel {
+  border: 1px solid hsl(var(--foreground) / 0.1);
+  border-radius: 0.5rem;
+  background: hsl(var(--background, 0 0% 100%));
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+}
+</style>

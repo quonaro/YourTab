@@ -373,7 +373,7 @@ function openChildTask(child: ChildTaskInfo, e: MouseEvent) {
       class="pointer-events-none z-[9999] rounded-lg border border-black/10 bg-card p-2.5 text-[12px] leading-relaxed text-foreground shadow-lg dark:border-white/10"
     >
       <div
-        class="line-clamp-10 whitespace-pre-wrap break-words text-muted-foreground"
+        class="line-clamp-5 whitespace-pre-wrap break-words text-muted-foreground"
         v-text="task.description"
       />
     </div>

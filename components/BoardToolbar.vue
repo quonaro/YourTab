@@ -47,7 +47,7 @@ const emit = defineEmits<{
           :value="searchQuery"
           type="text"
           data-keyboard-shortcut="search"
-          class="input-base h-9 w-48 pl-8 text-sm"
+          class="input-base h-9 w-72 pl-8 text-sm"
           :placeholder="t('boardFilters.searchPlaceholder')"
           @input="
             emit(
