@@ -1,4 +1,4 @@
-import { ref, shallowRef, computed, type Ref, type ComputedRef } from "vue";
+import { ref, shallowRef, type Ref, type ComputedRef } from "vue";
 import type { Task, TaskStatus, Board } from "@/lib/types";
 import { useI18n } from "@/composables/useI18n";
 import { mapApiError } from "@/lib/apiErrors";
@@ -43,6 +43,30 @@ export function useBoardDragDrop(opts: UseBoardDragDropOptions) {
 
   function isLocked(taskId: number): boolean {
     return lockedTaskIds.value.has(taskId);
+  }
+
+  function syncParentChildren(
+    taskId: number,
+    isEnd: boolean,
+    statusName?: string,
+    statusColor?: string,
+  ) {
+    let changed = false;
+    const updated = opts.tasks.value.map((t) => {
+      if (t.children?.some((c) => c.id === taskId)) {
+        changed = true;
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === taskId
+              ? { ...c, statusIsEnd: isEnd, statusName, statusColor }
+              : c,
+          ),
+        };
+      }
+      return t;
+    });
+    if (changed) opts.tasks.value = updated;
   }
 
   // ─── Task drag ───
@@ -221,6 +245,14 @@ export function useBoardDragDrop(opts: UseBoardDragDropOptions) {
     opts.tasks.value = [...otherTasks, ...reorderedPart];
     draggedTaskId.value = null;
     dragOverTaskId.value = null;
+
+    // Reactively update parent tasks' children checkboxes
+    syncParentChildren(
+      taskId,
+      status?.isEnd ?? false,
+      status?.name,
+      status?.color,
+    );
 
     try {
       const input: Record<string, unknown> = { statusId };

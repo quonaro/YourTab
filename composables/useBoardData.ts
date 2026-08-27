@@ -112,6 +112,30 @@ export function useBoardData(opts: UseBoardDataOptions) {
     }
   }
 
+  function syncParentChildren(
+    taskId: number,
+    isEnd: boolean,
+    statusName?: string,
+    statusColor?: string,
+  ) {
+    let changed = false;
+    const updated = opts.tasks.value.map((t) => {
+      if (t.children?.some((c) => c.id === taskId)) {
+        changed = true;
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === taskId
+              ? { ...c, statusIsEnd: isEnd, statusName, statusColor }
+              : c,
+          ),
+        };
+      }
+      return t;
+    });
+    if (changed) opts.tasks.value = updated;
+  }
+
   function handleWSMessage(msg: WSMessage) {
     switch (msg.type) {
       case "task.updated": {
@@ -122,6 +146,15 @@ export function useBoardData(opts: UseBoardDataOptions) {
             ...task,
             order: opts.tasks.value[idx].order,
           };
+        }
+        // Sync parent tasks' children checkboxes
+        if (task.status) {
+          syncParentChildren(
+            task.id,
+            task.status.isEnd,
+            task.status.name,
+            task.status.color,
+          );
         }
         break;
       }
@@ -171,6 +204,17 @@ export function useBoardData(opts: UseBoardDataOptions) {
           }
         }
         opts.tasks.value = [...otherTasks, ...reorderedPart];
+        // Sync parent tasks' children checkboxes for tasks whose status changed
+        if (sid != null && statusObj) {
+          for (const tid of taskIds) {
+            syncParentChildren(
+              tid as number,
+              statusObj.isEnd,
+              statusObj.name,
+              statusObj.color,
+            );
+          }
+        }
         break;
       }
     }
