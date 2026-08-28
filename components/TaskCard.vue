@@ -215,7 +215,7 @@ function openChildTask(child: ChildTaskInfo, e: MouseEvent) {
 
 <template>
   <div
-    class="group relative flex cursor-pointer flex-col gap-1 rounded-xl border border-black/20 bg-card p-3 transition hover:shadow-sm dark:border-white/20 [container-type:inline-size]"
+    class="group relative flex cursor-pointer flex-col gap-1 rounded-xl border border-black/20 bg-card p-3 transition hover:shadow-sm dark:border-foreground/10 [container-type:inline-size]"
     :style="{ fontSize: 'var(--task-card-font-size, 12px)' }"
     :class="[
       draggable ? 'cursor-grab active:cursor-grabbing' : '',
@@ -370,7 +370,7 @@ function openChildTask(child: ChildTaskInfo, e: MouseEvent) {
     <div
       v-if="showTooltip && task.description"
       :style="tooltipStyle"
-      class="pointer-events-none z-[9999] rounded-lg border border-black/10 bg-card p-2.5 text-[12px] leading-relaxed text-foreground shadow-lg dark:border-white/10"
+      class="pointer-events-none z-[9999] rounded-lg border border-black/10 bg-card p-2.5 text-[12px] leading-relaxed text-foreground shadow-lg dark:border-foreground/10"
     >
       <div
         class="line-clamp-5 whitespace-pre-wrap break-words text-muted-foreground"
