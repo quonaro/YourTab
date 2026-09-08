@@ -220,6 +220,8 @@ const taskOps = useBoardTaskOps({
   tasks,
   projectSlug: projectSlugRef,
   readOnly: readOnlyRef,
+  isRemote,
+  silentRefresh,
   createTask,
   updateTask,
 });

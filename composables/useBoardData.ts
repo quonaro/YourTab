@@ -160,7 +160,11 @@ export function useBoardData(opts: UseBoardDataOptions) {
       }
       case "task.created": {
         const task = msg.data.task as Task;
-        if (!opts.tasks.value.some((tk) => tk.id === task.id)) {
+        if (opts.isRemote.value) {
+          // Remote: server is source of truth for filtering — re-fetch with
+          // active filters applied so the task only appears if it matches.
+          silentRefresh();
+        } else if (!opts.tasks.value.some((tk) => tk.id === task.id)) {
           opts.tasks.value = [...opts.tasks.value, task];
         }
         break;

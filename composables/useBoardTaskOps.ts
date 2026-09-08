@@ -7,6 +7,8 @@ interface UseBoardTaskOpsOptions {
   tasks: Ref<Task[]>;
   projectSlug: ComputedRef<string>;
   readOnly: ComputedRef<boolean>;
+  isRemote: ComputedRef<boolean>;
+  silentRefresh: () => Promise<void>;
   createTask: (
     slug: string,
     input: { title: string; statusId: number; boardId?: number },
@@ -39,7 +41,11 @@ export function useBoardTaskOps(opts: UseBoardTaskOpsOptions) {
         boardId: boardId ?? undefined,
       });
       newTaskInputs.value[key] = "";
-      if (!opts.tasks.value.some((tk) => tk.id === created.id)) {
+      if (opts.isRemote.value) {
+        // Remote: server is source of truth for filtering — re-fetch with
+        // active filters applied so the new task only appears if it matches.
+        await opts.silentRefresh();
+      } else if (!opts.tasks.value.some((tk) => tk.id === created.id)) {
         opts.tasks.value = [...opts.tasks.value, created];
       }
       return null;
