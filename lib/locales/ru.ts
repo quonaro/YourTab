@@ -80,6 +80,8 @@ export default {
     },
     children: "Подзадачи",
     archived: "Архив",
+    recurring: "Регулярная",
+    nextRun: "Следующий запуск: {date}",
     daysLeft: "{n}д ост",
     hoursLeft: "{n}ч ост",
     minutesLeft: "{n}м ост",

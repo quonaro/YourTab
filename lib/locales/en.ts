@@ -81,6 +81,8 @@ export default {
     },
     children: "Subtasks",
     archived: "Archived",
+    recurring: "Recurring",
+    nextRun: "Next run: {date}",
     daysLeft: "{n}d left",
     hoursLeft: "{n}h left",
     minutesLeft: "{n}m left",

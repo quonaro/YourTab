@@ -82,6 +82,10 @@ export interface Task {
   order: number;
   boardId?: number;
   parentTaskId?: number;
+  /** ID of the recurring template task that spawned this task (instances only). */
+  recurrenceTaskId?: number | null;
+  /** Next scheduled run of the series this task belongs to (instances only). */
+  recurrenceNextRunAt?: string | null;
   childrenCount?: number;
   children?: ChildTaskInfo[];
   status?: TaskStatusInfo;

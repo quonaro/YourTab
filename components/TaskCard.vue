@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconLock,
   IconCalendar,
+  IconRepeat,
 } from "@tabler/icons-vue";
 import { useI18n } from "@/composables/useI18n";
 import { getApiDomain } from "@/lib/config";
@@ -198,6 +199,16 @@ const dateTooltip = computed(() => {
   return new Date(props.task.endDate).toLocaleDateString();
 });
 
+const isRecurringInstance = computed(() => props.task.recurrenceTaskId != null);
+
+const recurrenceTitle = computed(() => {
+  if (!props.task.recurrenceNextRunAt) return t("taskCard.recurring");
+  return t("taskCard.nextRun").replace(
+    "{date}",
+    new Date(props.task.recurrenceNextRunAt).toLocaleDateString(),
+  );
+});
+
 function openTask() {
   if (!isRemote.value || !props.orgSlug || !props.projectSlug) return;
   const taskId = props.task.shortId || String(props.task.id);
@@ -342,6 +353,15 @@ function openChildTask(child: ChildTaskInfo, e: MouseEvent) {
       >
         <IconCalendar :size="12" />
         {{ deadlineLabel }}
+      </span>
+
+      <span
+        v-if="isRecurringInstance"
+        class="inline-flex items-center gap-0.5 rounded bg-violet-500/10 px-1 py-px text-[0.833em] font-medium text-violet-600 dark:text-violet-400"
+        :title="recurrenceTitle"
+      >
+        <IconRepeat :size="12" />
+        {{ t("taskCard.recurring") }}
       </span>
 
       <!-- Avatars -->
