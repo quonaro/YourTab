@@ -185,6 +185,8 @@ export default {
     icon: "Иконка",
     name: "Название",
     namePlaceholder: "Напр. GitHub",
+    color: "Цвет",
+    showName: "Показывать название",
     url: "URL",
     urlPlaceholder: "https://...",
     cancel: "Отмена",

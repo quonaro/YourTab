@@ -10,6 +10,10 @@ export interface QuickLink {
   name: string;
   url: string;
   icon: string;
+  /** Hex color for the icon. Undefined = default muted theme color. */
+  color?: string;
+  /** Always render the link name next to the icon. */
+  showName?: boolean;
 }
 
 export interface ExtensionSettings {

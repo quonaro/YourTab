@@ -186,6 +186,8 @@ export default {
     icon: "Icon",
     name: "Name",
     namePlaceholder: "e.g. GitHub",
+    color: "Color",
+    showName: "Always show name",
     url: "URL",
     urlPlaceholder: "https://...",
     cancel: "Cancel",
