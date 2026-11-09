@@ -61,17 +61,20 @@ import {
   IconKey,
   IconWallet,
   IconCreditCard,
+  IconAlertTriangle,
   type Icon,
 } from "@tabler/icons-vue";
 import { useSettings } from "@/composables/useSettings";
 import { useI18n } from "@/composables/useI18n";
 import type { QuickLink } from "@/lib/settings";
+import Form from "@/components/Form.vue";
 
 const { t } = useI18n();
 const { settings, saveSettings } = useSettings();
 
 const showAddForm = ref(false);
 const editingId = ref<string | null>(null);
+const deleteTarget = ref<QuickLink | null>(null);
 
 const formData = ref({
   name: "",
@@ -172,9 +175,17 @@ function linkStyle(link: QuickLink): Record<string, string> | undefined {
   };
 }
 
+function resolveUrl(url: string) {
+  return url.startsWith("http") ? url : `https://${url}`;
+}
+
 function openLink(url: string) {
-  const fullUrl = url.startsWith("http") ? url : `https://${url}`;
-  window.open(fullUrl, "_blank");
+  window.location.href = resolveUrl(url);
+}
+
+function openLinkNewTab(e: MouseEvent, url: string) {
+  if (e.button !== 1) return;
+  window.open(resolveUrl(url), "_blank", "noopener");
 }
 
 function resetForm() {
@@ -235,9 +246,13 @@ function saveLink() {
   resetForm();
 }
 
-function deleteLink(id: string) {
-  settings.value.quickLinks = quickLinks.value.filter((l) => l.id !== id);
+function confirmDelete() {
+  if (!deleteTarget.value) return;
+  settings.value.quickLinks = quickLinks.value.filter(
+    (l) => l.id !== deleteTarget.value!.id,
+  );
   saveSettings();
+  deleteTarget.value = null;
 }
 
 function cancelForm() {
@@ -256,6 +271,8 @@ function cancelForm() {
       :class="{ 'w-auto gap-1.5 px-3': link.showName }"
       :style="linkStyle(link)"
       @click="openLink(link.url)"
+      @auxclick="openLinkNewTab($event, link.url)"
+      @mousedown.middle.prevent
       @contextmenu.prevent="startEdit(link)"
     >
       <component :is="getIcon(link.icon)" :size="15" class="shrink-0" />
@@ -264,7 +281,9 @@ function cancelForm() {
       </span>
       <span
         class="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white opacity-0 transition group-hover:opacity-100"
-        @click.stop="deleteLink(link.id)"
+        @click.stop="deleteTarget = link"
+        @auxclick.stop
+        @mousedown.middle.stop
       >
         <IconX :size="10" />
       </span>
@@ -404,6 +423,44 @@ function cancelForm() {
         </div>
       </div>
     </div>
+
+    <!-- Delete confirmation modal -->
+    <Form
+      as="modal"
+      destructive
+      :open="!!deleteTarget"
+      @update:open="
+        (v) => {
+          if (!v) deleteTarget = null;
+        }
+      "
+      @submit="confirmDelete"
+    >
+      <template #header>
+        <div class="flex items-center gap-2">
+          <IconAlertTriangle :size="18" class="text-destructive" />
+          <h2 class="text-sm font-semibold">
+            {{ t("quickLinks.confirmDelete") }}
+          </h2>
+        </div>
+      </template>
+      <p class="text-sm text-muted-foreground">
+        {{ deleteTarget?.name }}
+      </p>
+      <template #submit>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-small" @click="deleteTarget = null">
+            {{ t("quickLinks.cancel") }}
+          </button>
+          <button
+            type="submit"
+            class="btn-small bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {{ t("quickLinks.delete") }}
+          </button>
+        </div>
+      </template>
+    </Form>
   </div>
 </template>
 
