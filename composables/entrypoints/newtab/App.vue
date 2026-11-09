@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
-import { IconSettings } from "@tabler/icons-vue";
+import { IconSettings, IconSparkles } from "@tabler/icons-vue";
 import { useTheme } from "@/composables/useTheme";
 import { useI18n } from "@/composables/useI18n";
 import { useSettings } from "@/composables/useSettings";
 import { useOrgData, type OrgType } from "@/composables/useOrgData";
+import { useAuth } from "@/composables/useAuth";
+import { useAiChat } from "@/composables/useAiChat";
 import { readLastLocation, writeLastLocation } from "@/lib/settings";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import AgileBoard from "@/components/AgileBoard.vue";
@@ -12,6 +14,7 @@ import ProjectSidebar from "@/components/ProjectSidebar.vue";
 import SettingsPanel from "@/components/SettingsPanel.vue";
 import QuickLinks from "@/components/QuickLinks.vue";
 import SidebarNotes from "@/components/SidebarNotes.vue";
+import AiChatSidebar from "@/components/AiChatSidebar.vue";
 import ErrorBoundary from "@/components/ErrorBoundary.vue";
 import { useKeyboardShortcuts } from "@/composables/useKeyboardShortcuts";
 import type { Project } from "@/lib/types";
@@ -19,16 +22,24 @@ import type { Project } from "@/lib/types";
 const { t } = useI18n();
 const { initTheme } = useTheme();
 const { settings } = useSettings();
+const { isAuthenticated } = useAuth();
+const { accessState: aiAccess, checkAccess: checkAiAccess } = useAiChat();
 
 const selectedOrg = ref<string | null>(null);
 const selectedProject = ref<string | null>(null);
 const breadcrumbsRef = ref<InstanceType<typeof Breadcrumbs> | null>(null);
 const settingsOpen = ref(false);
+const aiOpen = ref(true);
 const isRestoring = ref(false);
 const pendingProject = ref<string | null>(null);
 
 const orgType = computed<OrgType>(() =>
   selectedOrg.value === "local" || !selectedOrg.value ? "local" : "remote",
+);
+
+// AI chats live on the server — hidden for the local (extension-only) org.
+const aiVisible = computed(
+  () => aiAccess.value === "granted" && orgType.value !== "local",
 );
 
 const orgData = useOrgData(orgType, selectedOrg);
@@ -52,8 +63,13 @@ function tryRestoreProject() {
   }
 }
 
+watch(isAuthenticated, (v) => {
+  if (v) void checkAiAccess();
+});
+
 onMounted(async () => {
   initTheme();
+  if (isAuthenticated.value) void checkAiAccess();
   const saved = readLastLocation();
   isRestoring.value = true;
   selectedOrg.value = saved.org ?? "local";
@@ -140,8 +156,18 @@ function handleDeleteProject(id: number) {
 
 const agileBoardRef = ref<InstanceType<typeof AgileBoard> | null>(null);
 
+const anyPanelOpen = computed({
+  get: () => settingsOpen.value || aiOpen.value,
+  set: (v) => {
+    if (!v) {
+      settingsOpen.value = false;
+      aiOpen.value = false;
+    }
+  },
+});
+
 useKeyboardShortcuts({
-  settingsOpen,
+  settingsOpen: anyPanelOpen,
   onEscape: () => {},
   onCreateStatus: () => agileBoardRef.value?.openCreateStatusModal(),
   onCreateBoard: () => agileBoardRef.value?.openCreateBoardModal(),
@@ -166,13 +192,23 @@ useKeyboardShortcuts({
       <div class="absolute left-1/2 -translate-x-1/2 z-30">
         <QuickLinks />
       </div>
-      <button
-        class="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-        :title="t('settings.title')"
-        @click="settingsOpen = true"
-      >
-        <IconSettings :size="18" />
-      </button>
+      <div class="flex items-center gap-1">
+        <button
+          v-if="aiVisible"
+          class="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          :title="t('ai.title')"
+          @click="aiOpen = true"
+        >
+          <IconSparkles :size="18" />
+        </button>
+        <button
+          class="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          :title="t('settings.title')"
+          @click="settingsOpen = true"
+        >
+          <IconSettings :size="18" />
+        </button>
+      </div>
     </header>
 
     <!-- Body -->
@@ -212,6 +248,9 @@ useKeyboardShortcuts({
           </div>
         </ErrorBoundary>
       </main>
+
+      <!-- AI chats panel (inline right column) -->
+      <AiChatSidebar v-if="aiOpen && aiVisible" v-model:open="aiOpen" />
     </div>
 
     <!-- Settings panel (right sidebar) -->

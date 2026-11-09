@@ -196,6 +196,27 @@ export default {
     confirmDelete: "Delete this link?",
     delete: "Delete",
   },
+  ai: {
+    title: "Yor",
+    newChat: "New chat",
+    empty: "No conversations yet. Start a new one to ask Yor a question.",
+    welcomeDescription:
+      "Yor can help with tasks, answer questions, and find information in your project",
+    placeholder: "Write a message to Yor...",
+    send: "Send",
+    stop: "Stop",
+    thinking: "Yor is thinking...",
+    reasoning: "Reasoning",
+    regenerate: "Regenerate response",
+    deleteConversation: "Delete conversation",
+    deleteConfirmTitle: "Delete conversation?",
+    deleteConfirmText: "Are you sure you want to delete this conversation?",
+    noAccess: "No access",
+    noAccessDescription:
+      "The AI assistant requires an active subscription. Purchase the add-on in billing settings to use this feature.",
+    errorOccurred: "Something went wrong",
+    retry: "Retry",
+  },
   settings: {
     title: "Settings",
     serverConnection: "Server connection",

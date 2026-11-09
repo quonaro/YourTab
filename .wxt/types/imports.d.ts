@@ -22,6 +22,7 @@ declare global {
   const setLanguage: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useI18n"))["setLanguage"];
   const storage: (typeof import("wxt/storage"))["storage"];
   const useActionsMenu: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useActionsMenu"))["useActionsMenu"];
+  const useAiChat: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useAiChat"))["useAiChat"];
   const useApi: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useApi"))["useApi"];
   const useAppConfig: (typeof import("wxt/client"))["useAppConfig"];
   const useAuth: (typeof import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useAuth"))["useAuth"];
@@ -43,6 +44,9 @@ declare global {
 }
 // for type re-export
 declare global {
+  // @ts-ignore
+  export type { AiAccessState } from "/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useAiChat";
+  import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useAiChat");
   // @ts-ignore
   export type { Note } from "/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes";
   import("/home/quonaro/CascadeProjects/work/YourTask/yourtask-extension/composables/useNotes");

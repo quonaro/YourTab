@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   plugins: [vue()],
   test: {
-    environment: "happy-dom",
+    environment: "jsdom",
+    environmentOptions: {
+      jsdom: {
+        pretendToBeVisual: true,
+      },
+    },
+    setupFiles: ["tests/setup.ts"],
     globals: true,
   },
   resolve: {

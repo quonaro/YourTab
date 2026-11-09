@@ -161,3 +161,61 @@ export interface TaskListParams {
   includeArchived?: boolean;
   parentOnly?: boolean;
 }
+
+export interface AiConversation {
+  id: string;
+  title: string;
+  model: string;
+  createdAt: string;
+  lastMessageAt: string;
+}
+
+export interface AiAttachment {
+  fileUuid: string;
+  filename: string;
+  contentType: string;
+  kind?: string;
+}
+
+export interface AiToolCall {
+  toolName: string;
+  arguments?: string;
+  result?: string;
+  status: string;
+}
+
+export interface AiMessage {
+  id: string;
+  role: string;
+  content: string;
+  toolCalls?: unknown;
+  toolResults?: unknown;
+  steps?: unknown;
+  model?: string;
+  reasoning?: string;
+  status: string;
+  error?: string;
+  attachments?: AiAttachment[];
+  createdAt: string;
+}
+
+export interface AiConversationDetail {
+  conversation: AiConversation;
+  messages: AiMessage[];
+}
+
+export interface AiSendMessageResponse {
+  message?: AiMessage;
+  assistantMessage?: AiMessage;
+  conversationTitle?: string;
+}
+
+export interface AiGenerationStatus {
+  active: boolean;
+  status?: string;
+  messageId?: string;
+  model?: string;
+  content?: string;
+  reasoning?: string;
+  toolCalls?: AiToolCall[];
+}

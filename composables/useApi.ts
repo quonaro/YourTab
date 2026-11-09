@@ -12,6 +12,10 @@ import type {
   TaskTag,
   SprintInfo,
   TaskListParams,
+  AiConversation,
+  AiConversationDetail,
+  AiSendMessageResponse,
+  AiGenerationStatus,
 } from "@/lib/types";
 
 const AUTH_ERRORS = new Set([
@@ -53,6 +57,9 @@ export function useApi() {
     };
 
     let response: Response | null = null;
+    // Parsed once for 401/403 responses so the auth-error probe doesn't
+    // consume the body before the error throw below.
+    let errBody: Record<string, string> | null = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -69,23 +76,25 @@ export function useApi() {
         throw new Error(err instanceof Error ? err.message : "Network error");
       }
 
+      if (response.status === 401 || response.status === 403) {
+        errBody = await response.json().catch(() => null);
+      }
+
       // Retry on expired/invalid access token (only on first attempt)
       if (
         (response.status === 401 || response.status === 403) &&
-        attempt === 0
+        attempt === 0 &&
+        errBody?.detail &&
+        AUTH_ERRORS.has(errBody.detail)
       ) {
-        const body = await response.json().catch(() => ({}));
-        if (AUTH_ERRORS.has(body.detail)) {
-          const refreshed = await refreshTokens();
-          if (refreshed && tokens.value) {
-            token = tokens.value.accessToken;
-            headers["Authorization"] = `Bearer ${token}`;
-            continue;
-          } else {
-            logout();
-            throw new Error("Session expired");
-          }
+        const refreshed = await refreshTokens();
+        if (refreshed && tokens.value) {
+          token = tokens.value.accessToken;
+          headers["Authorization"] = `Bearer ${token}`;
+          continue;
         }
+        logout();
+        throw new Error("Session expired");
       }
 
       // Retry on 5xx with backoff
@@ -100,7 +109,9 @@ export function useApi() {
     if (!response) throw new Error("Request failed");
 
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
+      const body =
+        errBody ??
+        ((await response.json().catch(() => ({}))) as Record<string, string>);
       throw new Error(
         body.detail || body.title || `API error: ${response.status}`,
       );
@@ -346,6 +357,59 @@ export function useApi() {
     });
   }
 
+  async function listAIConversations(): Promise<AiConversation[]> {
+    const resp = await apiFetch<{ conversations: AiConversation[] }>(
+      "/ai/conversations",
+    );
+    return resp.conversations ?? [];
+  }
+
+  async function createAIConversation(title?: string): Promise<AiConversation> {
+    const resp = await apiFetch<{ conversation: AiConversation }>(
+      "/ai/conversations",
+      {
+        method: "POST",
+        body: JSON.stringify(title ? { title } : {}),
+      },
+    );
+    return resp.conversation;
+  }
+
+  async function getAIConversation(id: string): Promise<AiConversationDetail> {
+    return apiFetch<AiConversationDetail>(`/ai/conversations/${id}`);
+  }
+
+  async function deleteAIConversation(id: string): Promise<void> {
+    await apiFetch(`/ai/conversations/${id}`, { method: "DELETE" });
+  }
+
+  async function sendAIMessage(
+    id: string,
+    text: string,
+  ): Promise<AiSendMessageResponse> {
+    return apiFetch<AiSendMessageResponse>(`/ai/conversations/${id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  }
+
+  async function getAIStatus(id: string): Promise<AiGenerationStatus> {
+    return apiFetch<AiGenerationStatus>(`/ai/conversations/${id}/status`);
+  }
+
+  async function stopAIGeneration(id: string): Promise<void> {
+    await apiFetch(`/ai/conversations/${id}/stop`, { method: "POST" });
+  }
+
+  async function regenerateAIResponse(
+    id: string,
+  ): Promise<AiSendMessageResponse> {
+    return apiFetch<AiSendMessageResponse>(
+      `/ai/conversations/${id}/regenerate`,
+      { method: "POST" },
+    );
+  }
+
   return {
     apiFetch,
     getWorkspace,
@@ -367,5 +431,13 @@ export function useApi() {
     deleteBoard,
     updateProject,
     deleteProject,
+    listAIConversations,
+    createAIConversation,
+    getAIConversation,
+    deleteAIConversation,
+    sendAIMessage,
+    getAIStatus,
+    stopAIGeneration,
+    regenerateAIResponse,
   };
 }

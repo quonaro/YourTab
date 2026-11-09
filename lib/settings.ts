@@ -24,6 +24,7 @@ export interface ExtensionSettings {
   quickLinks: QuickLink[];
   uiScale: number; // percent (50–150)
   animationsEnabled: boolean;
+  aiPanelWidth: number; // px (320–900)
 }
 
 export const defaultSettings: ExtensionSettings = {
@@ -34,6 +35,7 @@ export const defaultSettings: ExtensionSettings = {
   quickLinks: [],
   uiScale: 100,
   animationsEnabled: true,
+  aiPanelWidth: 480,
 };
 
 export const ACCENTS: Record<AccentKey, { label: string; value: string }> = {
@@ -70,6 +72,12 @@ export function readSettings(): ExtensionSettings {
           : defaultSettings.uiScale,
       animationsEnabled:
         parsed.animationsEnabled ?? defaultSettings.animationsEnabled,
+      aiPanelWidth:
+        typeof parsed.aiPanelWidth === "number" &&
+        parsed.aiPanelWidth >= 320 &&
+        parsed.aiPanelWidth <= 1200
+          ? parsed.aiPanelWidth
+          : defaultSettings.aiPanelWidth,
     };
   } catch {
     return defaultSettings;
