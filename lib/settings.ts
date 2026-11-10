@@ -2,7 +2,15 @@ export const SETTINGS_KEY = "yourtask-settings";
 
 export type Theme = "light" | "dark" | "system";
 export type AccentKey =
-  "indigo" | "blue" | "emerald" | "orange" | "purple" | "pink" | "cyan";
+  | "teal"
+  | "amber"
+  | "indigo"
+  | "blue"
+  | "emerald"
+  | "orange"
+  | "purple"
+  | "pink"
+  | "cyan";
 export type Language = "ru" | "en";
 
 export interface QuickLink {
@@ -30,7 +38,7 @@ export interface ExtensionSettings {
 export const defaultSettings: ExtensionSettings = {
   apiDomain: "",
   theme: "system",
-  accent: "indigo",
+  accent: "teal",
   language: "ru",
   quickLinks: [],
   uiScale: 100,
@@ -38,7 +46,16 @@ export const defaultSettings: ExtensionSettings = {
   aiPanelWidth: 480,
 };
 
-export const ACCENTS: Record<AccentKey, { label: string; value: string }> = {
+export const ACCENTS: Record<
+  AccentKey,
+  { label: string; value: string; foreground?: string }
+> = {
+  teal: { label: "Teal", value: "175 80% 35%" },
+  amber: {
+    label: "Amber",
+    value: "45 95% 45%",
+    foreground: "222 47% 11%",
+  },
   indigo: { label: "Indigo", value: "245 60% 55%" },
   blue: { label: "Blue", value: "217 90% 60%" },
   emerald: { label: "Emerald", value: "150 70% 40%" },

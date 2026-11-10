@@ -28,12 +28,16 @@ export function useTheme() {
   }
 
   function applyAccent(accent: AccentKey) {
-    const value = ACCENTS[accent]?.value ?? ACCENTS.indigo.value;
-    document.documentElement.style.setProperty("--primary", value);
-
+    const meta = ACCENTS[accent] ?? ACCENTS.teal;
+    const root = document.documentElement;
+    root.style.setProperty("--primary", meta.value);
+    root.style.setProperty(
+      "--primary-foreground",
+      meta.foreground ?? "0 0% 100%",
+    );
     const colored = faviconSvgRaw.replace(
       /fill="currentColor"/g,
-      `fill="hsl(${value})"`,
+      `fill="hsl(${meta.value})"`,
     );
     const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(colored)}`;
 

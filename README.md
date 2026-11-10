@@ -31,7 +31,7 @@ Browser extension that replaces your new tab page with an agile board — kanban
 - **Rich tasks** — priorities, deadlines, tags, sprints, assignees, recurring task indicators
 - **Search, filters & sorting** — filter by status, priority, assignee, deadline
 - **Projects sidebar, notes & quick links** — one new tab away from everything
-- **Theming** — light / dark / system themes, 7 accent colors, UI scaling
+- **Theming** — light / dark / system themes, 9 accent colors, UI scaling
 - **Import / export** — back up and restore projects, tasks and settings as a file
 - **English & Russian** — full localization
 - **Chrome & Firefox** — MV3 and MV2 builds from a single codebase

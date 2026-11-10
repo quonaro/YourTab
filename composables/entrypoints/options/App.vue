@@ -19,7 +19,7 @@ const { applyTheme, applyAccent, themes, accents } = useTheme();
 
 const apiDomain = ref("");
 const theme = ref<"light" | "dark" | "system">("system");
-const accent = ref<string>("indigo");
+const accent = ref<string>("teal");
 const language = ref<Language>("ru");
 const uiScale = ref(75);
 const animationsEnabled = ref(true);
